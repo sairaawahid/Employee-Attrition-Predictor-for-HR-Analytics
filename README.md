@@ -28,3 +28,14 @@ Applies concepts from Organizational Psychology including:
 - Streamlit (for dashboard)
 
 ## 📁 Project Structure
+data/
+notebooks/
+models/
+app/
+
+## 🚀 Outcome
+- Classification model predicting “Attrition: Yes/No”
+- Model interpretability (SHAP/LIME)
+- HR-facing app to simulate predictions
+
+---
