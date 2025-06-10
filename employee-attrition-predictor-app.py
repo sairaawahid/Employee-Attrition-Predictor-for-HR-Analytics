@@ -103,7 +103,6 @@ show_shap = st.checkbox("📊 Show SHAP Explanation")
 if show_shap:
     st.subheader("🔍 SHAP Force Plot (Local Explanation)")
     shap_values = explainer.shap_values(input_df)
-    st.set_option('deprecation.showPyplotGlobalUse', False)
     plt.title("Feature Impact on Prediction")
     shap.force_plot(explainer.expected_value, shap_values[0], input_df.iloc[0], matplotlib=True, show=False)
     st.pyplot(bbox_inches="tight")
