@@ -66,7 +66,7 @@ def user_input():
         WorkLifeBalance = st.sidebar.slider("Work-Life Balance (1-4)", 1, 4, 3)
 
     if st.sidebar.button("🔄 Reset Form"):
-        st.experimental_rerun()
+        st.rerun()
 
     return pd.DataFrame([{
         'Age': Age,
