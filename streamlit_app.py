@@ -4,6 +4,8 @@ import numpy as np
 import joblib
 import shap
 import matplotlib.pyplot as plt
+import json
+import pathlib
 
 # Load model and example schema
 @st.cache_resource
@@ -14,6 +16,9 @@ def load_model():
 @st.cache_data
 def load_schema():
     return pd.read_json("employee_schema.json")
+
+# Load numeric feature stats (min, max, mean)
+X_stats = json.loads(pathlib.Path("numeric_stats.json").read_text())
 
 model = load_model()
 schema = load_schema()
