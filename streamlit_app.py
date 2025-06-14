@@ -51,7 +51,7 @@ st.markdown(
 with st.expander("📘 How to use this app"):
     st.markdown(
         """
-       1. **Enter employee details** in the sidebar or **upload a CSV** to score multiple employees.  
+        1. **Enter employee details** in the sidebar or **upload a CSV** to score multiple employees.  
         2. The main panel updates with **attrition risk & probability**.  
         3. Scroll to **SHAP charts** to see which features drive the prediction.
         4. Use the row selector (when a CSV is uploaded) to inspect individual employees.  
