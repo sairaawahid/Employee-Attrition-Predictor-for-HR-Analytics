@@ -1,15 +1,8 @@
-# ---- core app ----
 streamlit==1.35.0
-
-# ---- scientific stack ----
-numpy==1.26.4          # wheels available for Py 3.11
-pandas==2.1.4          # last 2.1 release built against NumPy 1.x
-scikit-learn==1.3.2    # wheels for Py 3.11, works with NumPy 1.26
-scipy==1.11.4
-
-# ---- model / explainability ----
+scikit-learn==1.3.2
 xgboost==2.0.3
+pandas==2.1.4
+numpy==1.26.4
+matplotlib==3.8.2
+seaborn==0.13.2
 shap==0.45.0
-
-# ---- plotting ----
-matplotlib==3.8.4
