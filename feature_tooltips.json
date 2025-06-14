@@ -31,4 +31,25 @@
   "YearsInCurrentRole": "Years the employee has been in their current role.",
   "YearsSinceLastPromotion": "Years since the last promotion.",
   "YearsWithCurrManager": "Years the employee has worked with their current manager."
+  "BusinessTravel_Travel_Frequently": "Employee frequently travels for business purposes.",
+  "BusinessTravel_Travel_Rarely": "Employee rarely travels for business purposes.",
+  "Department_Research & Development": "Employee works in the Research & Development department.",
+  "Department_Sales": "Employee works in the Sales department.",
+  "EducationField_Life Sciences": "Employee studied a Life Sciences field.",
+  "EducationField_Marketing": "Employee studied Marketing.",
+  "EducationField_Medical": "Employee studied in a Medical-related field.",
+  "EducationField_Other": "Employee studied in a field not listed.",
+  "EducationField_Technical Degree": "Employee holds a technical degree.",
+  "Gender_Male": "Employee identifies as male.",
+  "JobRole_Human Resources": "Employee works in the Human Resources department.",
+  "JobRole_Manager": "Employee holds a Managerial position.",
+  "JobRole_Manufacturing Director": "Employee directs manufacturing operations.",
+  "JobRole_Research Director": "Employee leads research initiatives.",
+  "JobRole_Research Scientist": "Employee works as a Research Scientist.",
+  "JobRole_Sales Executive": "Employee holds a Sales Executive role.",
+  "JobRole_Sales Representative": "Employee works as a Sales Representative.",
+  "MaritalStatus_Married": "Employee is married.",
+  "MaritalStatus_Single": "Employee is single.",
+  "OverTime_Yes": "Employee regularly works overtime."
+
 }
