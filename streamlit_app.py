@@ -115,17 +115,16 @@ shap.decision_plot(
 st.pyplot(fig_dec)
 plt.clf()
 
-# 7-C  Individual Force Plot
+# 7-C  Individual Force Plot (Static matplotlib for Streamlit compatibility)
 st.markdown("### 🎯 Local Force Plot")
-shap.initjs()  # Ensure JS support is initialized
 
-force_plot_html = shap.force_plot(
+fig = shap.plots.force(
     explainer.expected_value,
     shap_vals[0],
     X_user.iloc[0],
-    matplotlib=False
+    matplotlib=True,
+    show=False
 )
-
-components.html(force_plot_html.html(), height=300)
+st.pyplot(fig)
 
 st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
