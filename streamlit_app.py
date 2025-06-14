@@ -111,6 +111,16 @@ col2.metric("Risk Probability", f"{prob:.1%}")
 col3.metric("Risk Category",
             "🔴 High" if prob > 0.6 else "🟡 Moderate" if prob > 0.3 else "🟢 Low")
 
+st.markdown(f"""
+    <div style="display: flex; justify-content: center; margin-top: 20px;">
+        <div style="background-color: #f9f9f9; padding: 25px 40px; border-radius: 12px;
+                    box-shadow: 2px 2px 12px #ccc; text-align: center; width: 350px;">
+            <h4 style="color: #333;">📊 Risk Dashboard</h4>
+            <h2 style="color: {risk_color}; margin: 10px 0;">{risk_label}</h2>
+            <p style="font-size: 18px;">Predicted Probability: <strong>{prob:.1%}</strong></p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 # ──────────────────────────────────────────────────────────────
 # 7.  SHAP CALCULATION
 # ──────────────────────────────────────────────────────────────
