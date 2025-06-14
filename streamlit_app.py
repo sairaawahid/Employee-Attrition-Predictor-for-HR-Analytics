@@ -6,6 +6,7 @@ import shap
 import matplotlib.pyplot as plt
 import json
 from pathlib import Path
+import streamlit.components.v1 as components
 
 # ──────────────────────────────────────────────────────────────
 # 1.  CACHED LOADERS
@@ -33,39 +34,39 @@ def get_explainer(_model):
 # ──────────────────────────────────────────────────────────────
 # 2.  INITIALIZE
 # ──────────────────────────────────────────────────────────────
-model       = load_model()
-schema      = load_schema()
-X_stats     = load_stats()
-tooltips    = load_tooltips()
-explainer   = get_explainer(model)
+model     = load_model()
+schema    = load_schema()
+X_stats   = load_stats()
+tooltips  = load_tooltips()
+explainer = get_explainer(model)
 
 # ──────────────────────────────────────────────────────────────
-# 3.  TITLE & USER GUIDANCE
+# 3.  PAGE TITLE / USER HELP
 # ──────────────────────────────────────────────────────────────
 st.title("Employee Attrition Predictor")
-st.markdown("Predict attrition risk and explore model explanations with **SHAP**.")
+st.markdown("Predict attrition risk and explore explanations with **XGBoost + SHAP**.")
 
 with st.expander("📘 How to use this app"):
-    st.markdown(
-        """
-        1. **Enter employee details** in the sidebar — or upload a CSV.  
-        2. The app predicts **attrition risk** for one or more employees.  
-        3. **SHAP plots** help visualize feature impact.  
-        4. Use this tool to identify and support at-risk employees proactively.
-        """
-    )
-
-st.sidebar.header("📋 Employee Attributes")
+    st.markdown("""
+    1. **Enter employee details** in the sidebar or **upload a CSV file**.
+    2. View the predicted **attrition risk** and **feature explanations**.
+    3. Use the results to guide HR decision-making and proactive interventions.
+    """)
 
 # ──────────────────────────────────────────────────────────────
-# 4.  USER INPUT SECTION (SIDEBAR)
+# 4.  INPUT SECTION
 # ──────────────────────────────────────────────────────────────
-def user_input_features():
+st.sidebar.header("📋 Input Employee Data")
+
+def user_input_features() -> pd.DataFrame:
     data = {}
     for col in schema.columns:
+        label = f"{col}"
         tooltip = tooltips.get(col, "")
+        help_text = tooltip if tooltip else None
+
         if schema[col].dtype == "object":
-            data[col] = st.sidebar.selectbox(f"{col}", schema[col].unique(), help=tooltip)
+            data[col] = st.sidebar.selectbox(label, schema[col].unique(), help=help_text)
         else:
             if col in X_stats:
                 cmin = float(X_stats[col]["min"])
@@ -74,97 +75,101 @@ def user_input_features():
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
 
-            if cmin == cmax:
-                data[col] = st.sidebar.number_input(f"{col}", value=cmin, help=tooltip)
-            else:
-                data[col] = st.sidebar.slider(f"{col}", cmin, cmax, cmean, help=tooltip)
+            data[col] = (
+                st.sidebar.number_input(label, value=cmin, help=help_text)
+                if cmin == cmax
+                else st.sidebar.slider(label, cmin, cmax, cmean, help=help_text)
+            )
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
-# 5.  BATCH UPLOAD (CSV)
+# 5.  BATCH UPLOAD
 # ──────────────────────────────────────────────────────────────
-uploaded_file = st.file_uploader("📂 Or Upload CSV for Batch Prediction", type=["csv"])
-if uploaded_file:
-    df_csv = pd.read_csv(uploaded_file)
-    st.write("📊 Uploaded Data Preview", df_csv.head())
+st.sidebar.markdown("---")
+uploaded_file = st.sidebar.file_uploader("📂 Upload CSV for Batch Prediction", type=["csv"])
 
-    # Ensure all expected columns are there
-    missing_cols = [col for col in schema.columns if col not in df_csv.columns]
-    if missing_cols:
-        st.error(f"The following required columns are missing from uploaded CSV: {missing_cols}")
-    else:
-        X_full = pd.concat([df_csv, schema]).drop_duplicates(keep="first")
-        X_enc = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
-        X_user = X_enc.iloc[:len(df_csv)]
+if uploaded_file is not None:
+    try:
+        uploaded_df = pd.read_csv(uploaded_file)
+        st.subheader("📄 Uploaded Data Preview")
+        st.dataframe(uploaded_df)
 
-        preds = model.predict(X_user)
-        probs = model.predict_proba(X_user)[:, 1]
+        # One-hot encode and align with training schema
+        X_uploaded_enc = pd.get_dummies(uploaded_df)
+        X_uploaded_enc = X_uploaded_enc.reindex(columns=schema.columns, fill_value=0)
 
-        st.subheader("Batch Predictions")
-        results = df_csv.copy()
-        results["Attrition Prediction"] = np.where(preds == 1, "Yes", "No")
-        results["Attrition Probability"] = (probs * 100).round(1).astype(str) + '%'
-        st.dataframe(results)
+        # Predict
+        preds = model.predict(X_uploaded_enc)
+        probs = model.predict_proba(X_uploaded_enc)[:, 1]
+        uploaded_df["Attrition Risk"] = ["Yes" if p == 1 else "No" for p in preds]
+        uploaded_df["Probability"] = [f"{p:.1%}" for p in probs]
 
-        st.subheader("SHAP Explanation (Top 3 Examples)")
-        shap_vals = explainer.shap_values(X_user)
-        for i in range(min(3, len(X_user))):
-            st.markdown(f"#### Employee {i+1}")
-            fig = shap.plots.force(
-                explainer.expected_value,
-                shap_vals[i],
-                X_user.iloc[i],
-                matplotlib=True,
-                show=False
-            )
-            st.pyplot(fig)
+        st.subheader("📊 Predictions")
+        st.dataframe(uploaded_df[["Attrition Risk", "Probability"]])
+
+        # SHAP Summary Plot for uploaded data
+        st.subheader("🔍 SHAP Explanation — Uploaded Data")
+        shap_vals = explainer.shap_values(X_uploaded_enc)
+        shap_vals = shap_vals if isinstance(shap_vals, np.ndarray) else shap_vals[1]
+        fig_uploaded, ax_uploaded = plt.subplots()
+        shap.summary_plot(shap_vals, X_uploaded_enc, show=False)
+        st.pyplot(fig_uploaded)
+        plt.clf()
+
+    except Exception as e:
+        st.error(f"Error processing uploaded CSV: {e}")
+        st.stop()
 
 else:
     # ──────────────────────────────────────────────────────────────
-    # 6.  SINGLE PREDICTION FROM SIDEBAR
+    # 6.  INDIVIDUAL INPUT PROCESSING
     # ──────────────────────────────────────────────────────────────
     input_df = user_input_features()
-    X_full = pd.concat([input_df, schema]).drop_duplicates(keep="first")
-    X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
-    X_user = X_enc.iloc[[0]]
+    X_full   = pd.concat([input_df, schema]).drop_duplicates(keep="first")
+    X_enc    = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
+    X_user   = X_enc.iloc[[0]]
 
     pred = model.predict(X_user)[0]
     prob = model.predict_proba(X_user)[0, 1]
 
-    st.subheader("Prediction")
+    st.subheader("🎯 Prediction")
     st.write(f"**Attrition Risk:** {'Yes' if pred else 'No'}")
     st.write(f"**Probability:** {prob:.1%}")
 
-    # ──────────────────────────────────────────────────────────────
-    # 7.  SHAP SINGLE EMPLOYEE PLOTS
-    # ──────────────────────────────────────────────────────────────
-    st.subheader("🔍 SHAP Explanations")
-
-    raw_shap = explainer.shap_values(X_user)
+    # SHAP Calculation
+    raw_shap  = explainer.shap_values(X_user)
     shap_vals = raw_shap if isinstance(raw_shap, np.ndarray) else raw_shap[1]
 
-    # 7-A Beeswarm
+    st.subheader("🔍 SHAP Explanations")
+
+    # A. Beeswarm
     st.markdown("### 🌐 Global Impact — Beeswarm")
     fig_bee, ax_bee = plt.subplots()
     shap.summary_plot(shap_vals, X_user, show=False)
     st.pyplot(fig_bee)
     plt.clf()
 
-    # 7-B Decision Plot
+    # B. Decision Path
     st.markdown("### 🧭 Decision Path (Individual)")
     fig_dec, ax_dec = plt.subplots()
-    shap.decision_plot(explainer.expected_value, shap_vals[0], X_user, show=False)
+    shap.decision_plot(
+        explainer.expected_value,
+        shap_vals[0],
+        X_user,
+        show=False
+    )
     st.pyplot(fig_dec)
     plt.clf()
 
-    # 7-C Force Plot (matplotlib safe)
+    # C. Force Plot (static)
     st.markdown("### 🎯 Local Force Plot")
-    fig = shap.plots.force(
+    fig_force = shap.plots.force(
         explainer.expected_value,
         shap_vals[0],
         X_user.iloc[0],
         matplotlib=True,
         show=False
     )
-    st.pyplot(fig)
+    st.pyplot(fig_force)
+
     st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
