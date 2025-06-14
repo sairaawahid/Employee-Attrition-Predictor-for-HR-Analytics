@@ -90,4 +90,4 @@ st.subheader("Feature Contribution (SHAP)")
 fig, ax = plt.subplots()
 shap.summary_plot(shap_values, X_encoded, plot_type="bar", show=False)
 st.pyplot(fig)
-
+plt.clf()
