@@ -33,15 +33,18 @@ def user_input_features():
     data = {}
     for col in schema.columns:
     if schema[col].dtype == "object":
-        # categorical
-        data[col] = st.sidebar.selectbox(col, schema[col].unique())
+        data[col] = st.sidebar.selectbox(f"{col}", schema[col].unique())
     else:
-        cmin = float(X_stats[col]["min"])   # see stats dict below
+        cmin = float(X_stats[col]["min"])
         cmax = float(X_stats[col]["max"])
-        if cmin == cmax:                   # 👉 identical values → use number_input
-            data[col] = st.sidebar.number_input(col, value=cmin)
+        cmean = float(X_stats[col]["mean"])
+        
+        # Fix Streamlit slider error: min must be < max
+        if cmin == cmax:
+            data[col] = st.sidebar.number_input(f"{col}", value=cmin)
         else:
-            data[col] = st.sidebar.slider(col, cmin, cmax, float(X_stats[col]["mean"]))
+            data[col] = st.sidebar.slider(f"{col}", cmin, cmax, cmean)
+
     return pd.DataFrame(data, index=[0])
 
 input_df = user_input_features()
