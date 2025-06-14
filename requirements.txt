@@ -1,7 +1,15 @@
+# ---- core app ----
 streamlit==1.35.0
-pandas==2.2.2
+
+# ---- data stack (keep NumPy 1.x) ----
 numpy==1.26.4
-scikit-learn==1.4.2
+pandas==2.1.4          # last Pandas that still works with NumPy 1.x
+scikit-learn==1.4.2    # works with NumPy 1.26.x
+scipy==1.11.4          # optional but avoids solver pulling 2.x
+
+# ---- model & explainability ----
 xgboost==2.0.3
 shap==0.45.0
+
+# ---- visuals ----
 matplotlib==3.8.4
