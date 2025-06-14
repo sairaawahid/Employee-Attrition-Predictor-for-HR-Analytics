@@ -38,9 +38,6 @@ explainer = get_explainer(model)
 # 3.  PAGE TITLE / INSTRUCTIONS
 # ──────────────────────────────────────────────────────────────
 st.title("Employee Attrition Predictor")
-st.markdown(
-    "Predict attrition risk and explore model explanations with **SHAP**."
-)
 
 with st.expander("📘 How to use this app"):
     st.markdown("""
