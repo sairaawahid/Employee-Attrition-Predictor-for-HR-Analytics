@@ -5,7 +5,7 @@
   "DailyRate": "Employee's daily compensation rate.",
   "Department": "The department the employee belongs to (e.g., Sales, R&D).",
   "DistanceFromHome": "Distance (in kilometers) from employee\u2019s home to work.",
-  "Education": "Employee\u2019s education level (1\u20135).",
+  "Education": "Employee\u2019s education level.",
   "EducationField": "Field in which the employee received their education.",
   "EmployeeNumber": "Unique ID number assigned to the employee.",
   "EnvironmentSatisfaction": "Employee's satisfaction with the work environment (1\u20134).",
