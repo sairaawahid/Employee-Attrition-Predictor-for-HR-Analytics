@@ -41,16 +41,18 @@ explainer = get_explainer(model)
 st.title("Employee Attrition Predictor")
 st.markdown(
     "Predict attrition risk and explore model explanations with **SHAP**."
-    """
-**How to use this app**
 
-1. **Enter employee details** in the sidebar (or keep defaults).  
-2. Click anywhere outside the sidebar to update the **predicted attrition risk**.  
-3. Explore **SHAP explanations** (beeswarm, decision, force) to see which features drive the prediction.  
-
-Use this tool to identify at-risk employees and target HR interventions proactively.
-"""
 )
+
+with st.expander("📘 How to use this app"):
+    st.markdown(
+        """
+        1. **Enter employee details** in the sidebar (or keep defaults).  
+        2. Click anywhere outside the sidebar to update the **predicted attrition risk**.  
+        3. View **explanation charts** showing which features affect attrition most.  
+        4. Use this tool to proactively identify and support at-risk employees.
+        """
+    )
 
 st.sidebar.header("📋 Employee Attributes")
 
