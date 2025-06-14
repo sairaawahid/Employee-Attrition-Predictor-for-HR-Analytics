@@ -27,10 +27,16 @@ st.sidebar.header("Input Employee Data")
 def user_input_features():
     data = {}
     for col in schema.columns:
-        if schema[col].dtype == "object":
-            data[col] = st.sidebar.selectbox(f"{col}", schema[col].unique())
+    if schema[col].dtype == "object":
+        # categorical
+        data[col] = st.sidebar.selectbox(col, schema[col].unique())
+    else:
+        cmin = float(X_stats[col]["min"])   # see stats dict below
+        cmax = float(X_stats[col]["max"])
+        if cmin == cmax:                   # 👉 identical values → use number_input
+            data[col] = st.sidebar.number_input(col, value=cmin)
         else:
-            data[col] = st.sidebar.slider(f"{col}", float(schema[col].min()), float(schema[col].max()), float(schema[col].mean()))
+            data[col] = st.sidebar.slider(col, cmin, cmax, float(X_stats[col]["mean"]))
     return pd.DataFrame(data, index=[0])
 
 input_df = user_input_features()
