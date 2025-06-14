@@ -49,10 +49,11 @@ st.markdown("Predict attrition risk and explore model explanations with **SHAP**
 with st.expander("📘 How to use this app"):
     st.markdown(
         """
-        1. **Enter employee details** in the sidebar (or upload a CSV).  
-        2. See the **predicted attrition risk** and **risk category card**.  
-        3. Review **SHAP explanations** for model transparency.  
-        4. Use insights to support employee retention decisions.
+        1. **Enter employee details** in the sidebar **or** upload a CSV to score multiple employees.  
+        2. The main panel updates with **attrition risk & probability**.  
+        3. Scroll to **SHAP charts** to see which features drive the prediction.
+        4. Use the row selector (when a CSV is uploaded) to inspect individual employees.  
+        5. Use these insights to design targeted HR interventions.
         """
     )
 
