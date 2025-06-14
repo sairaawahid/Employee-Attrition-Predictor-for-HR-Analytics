@@ -87,7 +87,7 @@ explainer   = get_explainer(model)
 shap_values = explainer.shap_values(X_user)
 
 st.subheader("Feature Contribution (SHAP)")
-st.set_option("deprecation.showPyplotGlobalUse", False)
+# st.set_option("deprecation.showPyplotGlobalUse", False)
 plt.title("Top Features Driving This Prediction")
 # For binary class, shap returns list; handle both cases
 shap.summary_plot(
