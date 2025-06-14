@@ -41,6 +41,15 @@ explainer = get_explainer(model)
 st.title("Employee Attrition Predictor")
 st.markdown(
     "Predict attrition risk and explore model explanations with **SHAP**."
+    """
+**How to use this app**
+
+1. **Enter employee details** in the sidebar (or keep defaults).  
+2. Click anywhere outside the sidebar to update the **predicted attrition risk**.  
+3. Explore **SHAP explanations** (beeswarm, decision, force) to see which features drive the prediction.  
+
+Use this tool to identify at-risk employees and target HR interventions proactively.
+"""
 )
 
 st.sidebar.header("📋 Employee Attributes")
@@ -80,7 +89,7 @@ X_user = X_enc.iloc[[0]]
 pred = model.predict(X_user)[0]
 prob = model.predict_proba(X_user)[0, 1]
 
-st.subheader("🔮 Prediction")
+st.subheader("Prediction")
 st.write(f"**Attrition Risk:** {'Yes' if pred else 'No'}")
 st.write(f"**Probability:** {prob:.1%}")
 
