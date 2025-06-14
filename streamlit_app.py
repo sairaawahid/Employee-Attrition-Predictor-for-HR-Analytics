@@ -34,24 +34,22 @@ def get_explainer(_model):
 # ──────────────────────────────────────────────────────────────
 # 2.  INITIALIZE
 # ──────────────────────────────────────────────────────────────
-model     = load_model()
-schema    = load_schema()
-X_stats   = load_stats()
-tooltips  = load_tooltips()
+model   = load_model()
+schema  = load_schema()
+X_stats = load_stats()
+feature_tooltips = load_tooltips()
 explainer = get_explainer(model)
 
 # ──────────────────────────────────────────────────────────────
 # 3.  PAGE TITLE / SIDEBAR
 # ──────────────────────────────────────────────────────────────
 st.title("Employee Attrition Predictor")
-st.markdown(
-    "Predict attrition risk and explore model explanations with **SHAP**."
-)
+st.markdown("Predict attrition risk and explore model explanations with **SHAP**.")
 
 with st.expander("📘 How to use this app"):
     st.markdown(
         """
-        1. **Enter employee details** in the sidebar or **upload a CSV** to score multiple employees.  
+       1. **Enter employee details** in the sidebar or **upload a CSV** to score multiple employees.  
         2. The main panel updates with **attrition risk & probability**.  
         3. Scroll to **SHAP charts** to see which features drive the prediction.
         4. Use the row selector (when a CSV is uploaded) to inspect individual employees.  
@@ -67,31 +65,28 @@ st.sidebar.header("📋 Employee Attributes")
 def user_input_features() -> pd.DataFrame:
     data = {}
     for col in schema.columns:
-        clean_col = col.strip()
-        tooltip = tooltips.get(clean_col, "")
-        label = f"{clean_col} ℹ️" if tooltip else clean_col
-
+        base_col = col.split("_")[0]  # For tooltip matching
+        tooltip = feature_tooltips.get(base_col, "")
         if schema[col].dtype == "object":
-            data[clean_col] = st.sidebar.selectbox(label, schema[col].unique(), help=tooltip)
+            data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=tooltip)
         else:
-            if clean_col in X_stats:
-                cmin  = float(X_stats[clean_col]["min"])
-                cmax  = float(X_stats[clean_col]["max"])
-                cmean = float(X_stats[clean_col]["mean"])
+            if col in X_stats:
+                cmin  = float(X_stats[col]["min"])
+                cmax  = float(X_stats[col]["max"])
+                cmean = float(X_stats[col]["mean"])
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
-
-            data[clean_col] = (
-                st.sidebar.number_input(label, value=cmin, help=tooltip)
+            data[col] = (
+                st.sidebar.number_input(col, value=cmin, help=tooltip)
                 if cmin == cmax
-                else st.sidebar.slider(label, cmin, cmax, cmean, help=tooltip)
+                else st.sidebar.slider(col, cmin, cmax, cmean, help=tooltip)
             )
     return pd.DataFrame(data, index=[0])
 
 input_df = user_input_features()
 
 # ──────────────────────────────────────────────────────────────
-# 5.  ONE-HOT ENCODE  &  PREDICT
+# 5.  ONE-HOT ENCODE & PREDICT
 # ──────────────────────────────────────────────────────────────
 X_full = pd.concat([input_df, schema]).drop_duplicates(keep="first")
 X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
@@ -101,7 +96,7 @@ pred = model.predict(X_user)[0]
 prob = model.predict_proba(X_user)[0, 1]
 
 # ──────────────────────────────────────────────────────────────
-# 6.  DASHBOARD METRIC CARDS
+# 6.  METRIC CARDS
 # ──────────────────────────────────────────────────────────────
 st.subheader("📊 Employee Risk Dashboard")
 
@@ -122,14 +117,14 @@ shap_vals = raw_shap if isinstance(raw_shap, np.ndarray) else raw_shap[1]
 # ──────────────────────────────────────────────────────────────
 st.subheader("🔍 SHAP Explanations")
 
-# 8-A  Global Beeswarm Plot
+# 8-A Global Beeswarm Plot
 st.markdown("### 🌐 Global Impact — Beeswarm")
 fig_bee, ax_bee = plt.subplots()
 shap.summary_plot(shap_vals, X_user, show=False)
 st.pyplot(fig_bee)
 plt.clf()
 
-# 8-B  Individual Decision Plot
+# 8-B Decision Path (Individual)
 st.markdown("### 🧭 Decision Path (Individual)")
 fig_dec, ax_dec = plt.subplots()
 shap.decision_plot(
@@ -141,7 +136,7 @@ shap.decision_plot(
 st.pyplot(fig_dec)
 plt.clf()
 
-# 8-C  Individual Force Plot (Matplotlib version)
+# 8-C Force Plot (Static for Streamlit)
 st.markdown("### 🎯 Local Force Plot")
 fig_force = shap.plots.force(
     explainer.expected_value,
