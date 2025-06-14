@@ -117,13 +117,12 @@ plt.clf()
 
 # 7-C  Individual Force Plot
 st.markdown("### 🎯 Local Force Plot")
-shap.initjs()  # Ensure JS support is initialized
 
 force_plot_html = shap.force_plot(
     explainer.expected_value,
     shap_vals[0],
     X_user.iloc[0],
-    matplotlib=False
+    matplotlib=False  # interactive JS plot
 )
 
 components.html(force_plot_html.html(), height=300)
