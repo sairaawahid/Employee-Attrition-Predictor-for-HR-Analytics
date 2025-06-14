@@ -1,5 +1,3 @@
-# app.py
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,64 +5,55 @@ import joblib
 import shap
 import matplotlib.pyplot as plt
 
-# Load model
-model = joblib.load('models/xgboost_optimized_model.pkl')
+# Load model and example schema
+@st.cache_resource
+def load_model():
+    model = joblib.load('xgboost_optimized_model.pkl')
+    return model
 
-# Load SHAP explainer
-explainer = shap.TreeExplainer(model)
+@st.cache_data
+def load_schema():
+    return pd.read_json("employee_schema.json")
 
-st.set_page_config(page_title="Attrition Predictor", layout="centered")
+model = load_model()
+schema = load_schema()
+
 st.title("🧠 Employee Attrition Predictor")
-st.markdown("Predict whether an employee is likely to leave the company based on key HR metrics.")
+st.markdown("Predict the risk of attrition based on employee attributes. Powered by XGBoost and SHAP.")
 
 # Sidebar input
-st.sidebar.header("Enter Employee Information")
+st.sidebar.header("Input Employee Data")
 
-def user_input():
-    Age = st.sidebar.slider("Age", 18, 60, 35)
-    MonthlyIncome = st.sidebar.slider("Monthly Income", 1000, 20000, 5000)
-    OverTime_Yes = st.sidebar.selectbox("Works Overtime?", ["Yes", "No"])
-    JobSatisfaction = st.sidebar.slider("Job Satisfaction (1-4)", 1, 4, 3)
-    EnvironmentSatisfaction = st.sidebar.slider("Environment Satisfaction (1-4)", 1, 4, 3)
-    DistanceFromHome = st.sidebar.slider("Distance From Home (km)", 1, 50, 10)
-    BusinessTravel_Travel_Frequently = st.sidebar.selectbox("Travels Frequently?", ["Yes", "No"])
-    NumCompaniesWorked = st.sidebar.slider("Number of Companies Worked", 0, 10, 2)
-    StockOptionLevel = st.sidebar.slider("Stock Option Level (0-3)", 0, 3, 1)
-    YearsWithCurrManager = st.sidebar.slider("Years with Current Manager", 0, 20, 4)
-    WorkLifeBalance = st.sidebar.slider("Work-Life Balance (1-4)", 1, 4, 3)
-    
-    data = {
-        'Age': Age,
-        'MonthlyIncome': MonthlyIncome,
-        'OverTime_Yes': 1 if OverTime_Yes == "Yes" else 0,
-        'JobSatisfaction': JobSatisfaction,
-        'EnvironmentSatisfaction': EnvironmentSatisfaction,
-        'DistanceFromHome': DistanceFromHome,
-        'BusinessTravel_Travel_Frequently': 1 if BusinessTravel_Travel_Frequently == "Yes" else 0,
-        'NumCompaniesWorked': NumCompaniesWorked,
-        'StockOptionLevel': StockOptionLevel,
-        'YearsWithCurrManager': YearsWithCurrManager,
-        'WorkLifeBalance': WorkLifeBalance
-    }
+def user_input_features():
+    data = {}
+    for col in schema.columns:
+        if schema[col].dtype == "object":
+            data[col] = st.sidebar.selectbox(f"{col}", schema[col].unique())
+        else:
+            data[col] = st.sidebar.slider(f"{col}", float(schema[col].min()), float(schema[col].max()), float(schema[col].mean()))
+    return pd.DataFrame(data, index=[0])
 
-    return pd.DataFrame([data])
+input_df = user_input_features()
 
-input_df = user_input()
+# Encode user input to match model (same columns)
+X = pd.concat([input_df, schema]).drop_duplicates(keep='first')  # ensure all columns
+X_encoded = pd.get_dummies(X)
+X_encoded = X_encoded.reindex(columns=schema.columns, fill_value=0)
 
-# Prediction
-prediction = model.predict(input_df)[0]
-probability = model.predict_proba(input_df)[0][1]
+# Predict
+prediction = model.predict(X_encoded)[0]
+probability = model.predict_proba(X_encoded)[0][1]
 
-# Display results
-st.subheader("Prediction Result")
-st.write("Attrition Prediction:", "🔴 Yes" if prediction == 1 else "🟢 No")
-st.write("Probability of Leaving:", f"{probability:.2%}")
+st.subheader("Prediction:")
+st.write(f"**Attrition Risk: {'Yes' if prediction == 1 else 'No'}**")
+st.write(f"**Probability: {probability:.2%}**")
 
 # SHAP Explanation
-st.subheader("Model Explanation (SHAP)")
-shap_values = explainer.shap_values(input_df)
+st.subheader("Explanation (SHAP Feature Impact):")
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X_encoded)
 
 st.set_option('deprecation.showPyplotGlobalUse', False)
-plt.title("Feature Impact on Prediction")
-shap.force_plot(explainer.expected_value, shap_values[0], input_df.iloc[0], matplotlib=True, show=False)
+plt.title("Feature Impact (SHAP)")
+shap.summary_plot(shap_values, X_encoded, plot_type="bar", show=False)
 st.pyplot(bbox_inches='tight')
