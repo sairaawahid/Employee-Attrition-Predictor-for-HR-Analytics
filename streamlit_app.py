@@ -38,19 +38,19 @@ explainer = get_explainer(model)
 # ──────────────────────────────────────────────────────────────
 # 3.  PAGE TITLE / SIDEBAR
 # ──────────────────────────────────────────────────────────────
-st.title("Employee Attrition Predictor")
-st.markdown(
-    "Predict attrition risk and explore model explanations with **SHAP**."
+st.title("🧠 Employee Attrition Predictor")
+st.markdown("Predict attrition risk and explore model explanations with **SHAP**.")
 
-)
-
-with st.expander("📘 How to use this app"):
+# Collapsible help — starts open the first time; collapse again if you like
+with st.expander("📘 How to use this app", expanded=False):
     st.markdown(
         """
-        1. **Enter employee details** in the sidebar (or keep defaults).  
-        2. Click anywhere outside the sidebar to update the **predicted attrition risk**.  
-        3. View **explanation charts** showing which features affect attrition most.  
-        4. Use this tool to proactively identify and support at-risk employees.
+        **Step-by-step**
+
+        1. Select or edit employee details in the sidebar.  
+        2. The main panel instantly updates with attrition risk and probability.  
+        3. Scroll down to read SHAP charts (global and individual explanations).  
+        4. Use the insights to design targeted HR interventions.
         """
     )
 
