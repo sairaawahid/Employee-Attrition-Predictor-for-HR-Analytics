@@ -117,13 +117,15 @@ plt.clf()
 
 # 7-C  Individual Force Plot
 st.markdown("### 🎯 Local Force Plot")
-force_html = shap.plots.force(
+shap.initjs()  # Ensure JS support is initialized
+
+force_plot_html = shap.force_plot(
     explainer.expected_value,
     shap_vals[0],
     X_user.iloc[0],
-    matplotlib=False,
-    show=False
+    matplotlib=False
 )
-components.html(force_html.html(), height=300)
+
+components.html(force_plot_html.html(), height=300)
 
 st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
