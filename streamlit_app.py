@@ -6,6 +6,7 @@ import shap
 import matplotlib.pyplot as plt
 import json
 from pathlib import Path
+import streamlit.components.v1 as components
 
 # ──────────────────────────────────────────────────────────────
 # 1.  CACHED LOADERS
@@ -33,14 +34,14 @@ def get_explainer(_model):
 # ──────────────────────────────────────────────────────────────
 # 2.  INITIALIZE
 # ──────────────────────────────────────────────────────────────
-model            = load_model()
-schema           = load_schema()
-X_stats          = load_stats()
+model   = load_model()
+schema  = load_schema()
+X_stats = load_stats()
 feature_tooltips = load_tooltips()
-explainer        = get_explainer(model)
+explainer = get_explainer(model)
 
 # ──────────────────────────────────────────────────────────────
-# 3.  PAGE HEADER
+# 3.  PAGE TITLE / SIDEBAR
 # ──────────────────────────────────────────────────────────────
 st.title("Employee Attrition Predictor")
 st.markdown("Predict attrition risk and explore model explanations with **SHAP**.")
@@ -48,127 +49,105 @@ st.markdown("Predict attrition risk and explore model explanations with **SHAP**
 with st.expander("📘 How to use this app"):
     st.markdown(
         """
-        1. **Enter employee details** in the sidebar **or** upload a CSV file.  
-        2. View predicted **attrition risk** and the color-coded risk card.  
-        3. Select an employee row (if CSV) to inspect individual SHAP plots.  
-        4. Use these insights to design proactive HR interventions.
+        1. **Enter employee details** in the sidebar or **upload a CSV** to score multiple employees.  
+        2. The main panel updates with **attrition risk & probability**.  
+        3. Scroll to **SHAP charts** to see which features drive the prediction.
+        4. Use the row selector (when a CSV is uploaded) to inspect individual employees.  
+        5. Use these insights to design targeted HR interventions.
         """
     )
 
-# ──────────────────────────────────────────────────────────────
-# 4.  SIDEBAR INPUTS (SINGLE EMPLOYEE)
-# ──────────────────────────────────────────────────────────────
 st.sidebar.header("📋 Employee Attributes")
 
+# ──────────────────────────────────────────────────────────────
+# 4.  SIDEBAR INPUTS
+# ──────────────────────────────────────────────────────────────
 def user_input_features() -> pd.DataFrame:
     data = {}
     for col in schema.columns:
-        base = col.split("_")[0]          # match tooltip for one-hot fields
-        tip  = feature_tooltips.get(base, "")
+        base_col = col.split("_")[0]  # For tooltip matching
+        tooltip = feature_tooltips.get(base_col, "")
         if schema[col].dtype == "object":
-            data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=tip)
+            data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=tooltip)
         else:
             if col in X_stats:
-                cmin, cmax, cmean = (
-                    float(X_stats[col]["min"]),
-                    float(X_stats[col]["max"]),
-                    float(X_stats[col]["mean"]),
-                )
+                cmin  = float(X_stats[col]["min"])
+                cmax  = float(X_stats[col]["max"])
+                cmean = float(X_stats[col]["mean"])
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
             data[col] = (
-                st.sidebar.number_input(col, value=cmin, help=tip)
+                st.sidebar.number_input(col, value=cmin, help=tooltip)
                 if cmin == cmax
-                else st.sidebar.slider(col, cmin, cmax, cmean, help=tip)
+                else st.sidebar.slider(col, cmin, cmax, cmean, help=tooltip)
             )
     return pd.DataFrame(data, index=[0])
 
-# ──────────────────────────────────────────────────────────────
-# 5.  CSV UPLOAD OR MANUAL INPUT
-# ──────────────────────────────────────────────────────────────
-uploaded_file = st.file_uploader("📂 Upload Employee CSV", type=["csv"])
+input_df = user_input_features()
 
-if uploaded_file:
-    raw_df = pd.read_csv(uploaded_file)
-    st.success(f"Loaded {len(raw_df)} employees from CSV.")
-else:
-    raw_df = user_input_features()
-
-# One-hot encode & align with training schema
-X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
+# ──────────────────────────────────────────────────────────────
+# 5.  ONE-HOT ENCODE & PREDICT
+# ──────────────────────────────────────────────────────────────
+X_full = pd.concat([input_df, schema]).drop_duplicates(keep="first")
 X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
-X_pred = X_enc.iloc[: len(raw_df)]
+X_user = X_enc.iloc[[0]]
+
+pred = model.predict(X_user)[0]
+prob = model.predict_proba(X_user)[0, 1]
 
 # ──────────────────────────────────────────────────────────────
-# 6.  PREDICTION & RISK CARD(S)
+# 6.  METRIC CARDS
 # ──────────────────────────────────────────────────────────────
-preds = model.predict(X_pred)
-probs = model.predict_proba(X_pred)[:, 1]
+st.subheader("Prediction")
 
-if len(raw_df) == 1:
-    pred, prob = preds[0], probs[0]
-
-    # Risk category
-    risk_label = (
-        "🟢 Low"      if prob < 0.30 else
-        "🟡 Moderate" if prob < 0.60 else
-        "🔴 High"
-    )
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Prediction", "Yes" if pred else "No")
-    col2.metric("Attrition Probability", f"{prob:.1%}")
-    col3.metric("Risk Category", risk_label)
-
+if prob < 0.3:
+    risk_level = "🟢 Low"
+elif prob < 0.6:
+    risk_level = "🟡 Moderate"
 else:
-    results = raw_df.copy()
-    results["Prediction"]  = np.where(preds == 1, "Yes", "No")
-    results["Probability"] = (probs * 100).round(1).astype(str) + " %"
-    results["Risk"] = pd.cut(
-        probs, bins=[0, 0.30, 0.60, 1.00],
-        labels=["Low", "Moderate", "High"]
-    )
-    st.subheader("📑 Batch Predictions")
-    st.dataframe(results)
+    risk_level = "🔴 High"
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Prediction", "Yes" if pred else "No")
+col2.metric("Attrition Probability", f"{prob:.1%}")
+col3.metric("Risk Category", risk_level)
 
 # ──────────────────────────────────────────────────────────────
-# 7.  SHAP EXPLANATIONS
+# 7.  SHAP CALCULATION
+# ──────────────────────────────────────────────────────────────
+raw_shap = explainer.shap_values(X_user)
+shap_vals = raw_shap if isinstance(raw_shap, np.ndarray) else raw_shap[1]
+
+# ──────────────────────────────────────────────────────────────
+# 8.  SHAP VISUALS
 # ──────────────────────────────────────────────────────────────
 st.subheader("🔍 SHAP Explanations")
 
-# Row selector (only shown for batch mode)
-row_idx = 0
-if len(raw_df) > 1:
-    row_idx = st.number_input(
-        "Select employee row for detailed explanation:",
-        min_value=0, max_value=len(raw_df) - 1, step=1, value=0
-    )
-
-X_row       = X_pred.iloc[[row_idx]]
-shap_values = explainer.shap_values(X_row)
-if not isinstance(shap_values, np.ndarray):  # binary model returns list
-    shap_values = shap_values[1]
-
-# 7-A Global Beeswarm (for selected row input)
+# 8-A Global Beeswarm Plot
 st.markdown("### 🌐 Global Impact — Beeswarm")
-fig_bee, _ = plt.subplots()
-shap.summary_plot(shap_values, X_row, show=False)
+fig_bee, ax_bee = plt.subplots()
+shap.summary_plot(shap_vals, X_user, show=False)
 st.pyplot(fig_bee)
 plt.clf()
 
-# 7-B Decision Plot
+# 8-B Decision Path (Individual)
 st.markdown("### 🧭 Decision Path (Individual)")
-fig_dec, _ = plt.subplots()
-shap.decision_plot(explainer.expected_value, shap_values[0], X_row, show=False)
+fig_dec, ax_dec = plt.subplots()
+shap.decision_plot(
+    explainer.expected_value,
+    shap_vals[0],
+    X_user,
+    show=False
+)
 st.pyplot(fig_dec)
 plt.clf()
 
-# 7-C Force Plot
+# 8-C Force Plot (Static for Streamlit)
 st.markdown("### 🎯 Local Force Plot")
 fig_force = shap.plots.force(
     explainer.expected_value,
-    shap_values[0],
-    X_row.iloc[0],
+    shap_vals[0],
+    X_user.iloc[0],
     matplotlib=True,
     show=False
 )
