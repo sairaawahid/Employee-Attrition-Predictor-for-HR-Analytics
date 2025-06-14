@@ -5,7 +5,7 @@ import joblib
 import shap
 import matplotlib.pyplot as plt
 import json
-import pathlib
+from pathlib import Path
 
 # Cache model
 @st.cache_resource
