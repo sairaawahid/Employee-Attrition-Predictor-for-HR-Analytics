@@ -2,126 +2,173 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import shap
-import json
 import joblib
+import json
 import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestClassifier
+from pathlib import Path
+from datetime import datetime
 
 st.set_page_config(layout="wide", page_title="Employee Attrition Predictor")
 
-# Load model and metadata
-model = joblib.load("model.pkl")
+# ──────────────────────────────────────────────────────────────
+# 1. LOAD MODEL & METADATA
+# ──────────────────────────────────────────────────────────────
+model = joblib.load("xgboost_optimized_model.pkl")
+
 with open("employee_schema.json") as f:
     schema = json.load(f)
 with open("feature_tooltips.json") as f:
     tooltips = json.load(f)
 
-# Utility: infer dtype from schema
-def is_categorical(col):
-    return isinstance(schema[col].get("dtype", ""), str) and schema[col]["dtype"] == "object"
+explainer = shap.TreeExplainer(model)
 
+# ──────────────────────────────────────────────────────────────
+# 2. HELPER FUNCTIONS
+# ──────────────────────────────────────────────────────────────
+def is_cat(col):       # schema flag
+    return schema[col]["dtype"] == "object"
+
+def risk_label(p):
+    return "🟢 Low" if p < 0.30 else "🟡 Moderate" if p < 0.60 else "🔴 High"
+
+# sample row (same keys as schema)
+sample_employee = {
+    "Age": 32, "BusinessTravel": "Travel_Rarely", "DailyRate": 1100,
+    "Department": "Research & Development", "DistanceFromHome": 8,
+    "Education": 3, "EducationField": "Life Sciences",
+    "EnvironmentSatisfaction": 3, "Gender": "Male", "HourlyRate": 65,
+    "JobInvolvement": 3, "JobLevel": 2, "JobRole": "Research Scientist",
+    "JobSatisfaction": 2, "MaritalStatus": "Single", "MonthlyIncome": 5200,
+    "MonthlyRate": 14000, "NumCompaniesWorked": 2, "OverTime": "Yes",
+    "PercentSalaryHike": 13, "PerformanceRating": 3,
+    "RelationshipSatisfaction": 2, "StockOptionLevel": 1,
+    "TotalWorkingYears": 10, "TrainingTimesLastYear": 3,
+    "WorkLifeBalance": 2, "YearsAtCompany": 5, "YearsInCurrentRole": 3,
+    "YearsSinceLastPromotion": 1, "YearsWithCurrManager": 2,
+}
+
+# ──────────────────────────────────────────────────────────────
+# 3. SIDEBAR INPUTS
+# ──────────────────────────────────────────────────────────────
 def sidebar_inputs():
-    st.markdown("### 🎛️ Enter Employee Attributes")
     data = {}
     for col, meta in schema.items():
-        key = f"input_{col}"
-        tip = tooltips.get(col, "")
-
-        if is_categorical(col):
-            options = meta.get("options", [])
-            default = st.session_state.get(key, options[0] if options else "")
-            data[col] = st.selectbox(col, options, index=options.index(default) if default in options else 0, key=key, help=tip)
-        else:
+        key = f"inp_{col}"
+        tip = tooltips.get(col.split("_")[0], "")
+        if is_cat(col):                                   # categorical
+            opts = meta["options"]
+            current = st.session_state.get(key, opts[0])
+            if current not in opts:
+                current = opts[0]
+            data[col] = st.sidebar.selectbox(
+                col, opts, index=opts.index(current), key=key, help=tip
+            )
+        else:                                             # numeric
             cmin, cmax, cmean = meta["min"], meta["max"], meta["mean"]
             is_int = str(meta["dtype"]).startswith("int")
-            cast = (lambda x: int(round(x))) if is_int else float
+            cast   = (lambda x: int(round(x))) if is_int else float
             cmin, cmax, cmean = cast(cmin), cast(cmax), cast(cmean)
-            session_val = st.session_state.get(key, cmean)
-            try:
-                session_val = cast(session_val)
-            except Exception:
-                session_val = cmean
-            session_val = min(max(session_val, cmin), cmax)
 
-            if cmin == cmax:
-                data[col] = st.number_input(col, value=session_val, key=key, help=tip)
+            session_val = st.session_state.get(key, cmean)
+            try: session_val = cast(session_val)
+            except Exception: session_val = cmean
+            session_val = max(min(session_val, cmax), cmin)
+
+            # If range collapsed or slider fails, fallback to number_input
+            slider_possible = (abs(cmax - cmin) > 1e-9)
+            if not slider_possible:
+                data[col] = st.sidebar.number_input(col, value=session_val, key=key, help=tip)
             else:
                 try:
-                    data[col] = st.slider(col, cmin, cmax, session_val, key=key, help=tip)
-                except Exception as e:
-                    st.warning(f"{col}: slider unsupported ({e}). Showing number box.")
-                    data[col] = st.number_input(col, min_value=cmin, max_value=cmax, value=session_val, key=key, help=tip)
+                    data[col] = st.sidebar.slider(
+                        col, cmin, cmax, session_val, key=key, help=tip
+                    )
+                except Exception:
+                    data[col] = st.sidebar.number_input(
+                        col, min_value=cmin, max_value=cmax,
+                        value=session_val, key=key, help=tip
+                    )
     return pd.DataFrame([data])
 
-# Callback: Reset Form
+# callbacks
 def reset_form():
-    for col in schema:
-        st.session_state[f"input_{col}"] = schema[col].get("mean") if not is_categorical(col) else schema[col]["options"][0]
+    for col, meta in schema.items():
+        key = f"inp_{col}"
+        st.session_state[key] = meta["options"][0] if is_cat(col) else meta["mean"]
 
-# Callback: Use Sample Data
 def load_sample():
-    for col in schema:
-        key = f"input_{col}"
-        val = schema[col]["sample"]
-        st.session_state[key] = val
+    for col, val in sample_employee.items():
+        st.session_state[f"inp_{col}"] = val
 
-# UI Header
-st.title("📊 Employee Attrition Predictor for HR Analytics")
+# ──────────────────────────────────────────────────────────────
+# 4. HEADER & GUIDE
+# ──────────────────────────────────────────────────────────────
+st.title("📊 Employee Attrition Predictor")
 
-with st.expander("ℹ️ How to use this app", expanded=True):
+with st.expander("ℹ️ Guide", expanded=True):
     st.markdown("""
-This AI-powered HR dashboard predicts the likelihood of employee attrition using behavioral and organizational data. You can:
-
-- Manually input employee attributes below
-- Or upload a CSV file for batch prediction
-
-Each prediction includes SHAP visual explanations and psychology-based HR recommendations.
+1. **Enter data** in the sidebar or **upload CSV** for batch prediction  
+2. Press **Predict** to see risk & SHAP explanations  
+3. Use **Sample Data** for demo, **Reset** to clear
 """)
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        st.button("🔁 Reset Form", on_click=reset_form)
-    with col2:
-        st.button("🧪 Use Sample Data", on_click=load_sample)
+    colA, colB = st.columns([1, 4])
+    colA.button("🔁 Reset", on_click=reset_form)
+    colB.button("🧪 Sample Data", on_click=load_sample)
 
-# Upload CSV or single mode
-uploaded_file = st.file_uploader("📤 Upload CSV for Batch Prediction (optional)", type=["csv"])
-if uploaded_file:
-    raw_df = pd.read_csv(uploaded_file)
-    batch_mode = True
+# ──────────────────────────────────────────────────────────────
+# 5. CSV UPLOAD OR SINGLE ENTRY
+# ──────────────────────────────────────────────────────────────
+uploaded = st.file_uploader("Upload CSV (optional)", type="csv")
+if uploaded:
+    raw_df = pd.read_csv(uploaded)
+    batch  = True
 else:
     raw_df = sidebar_inputs()
-    batch_mode = False
+    batch  = False
 
-# Prediction
-if st.button("🔮 Predict Attrition"):
-    df = pd.get_dummies(raw_df)
-    for col in model.feature_names_in_:
-        if col not in df:
-            df[col] = 0
-    df = df[model.feature_names_in_]
+# ──────────────────────────────────────────────────────────────
+# 6. PREDICT BUTTON
+# ──────────────────────────────────────────────────────────────
+if st.button("🔮 Predict"):
+    # one-hot encode, align to model
+    X = pd.get_dummies(raw_df)
+    for feat in model.feature_names_in_:
+        if feat not in X:
+            X[feat] = 0
+    X = X[model.feature_names_in_]
 
-    preds = model.predict(df)
-    probs = model.predict_proba(df)[:, 1]
+    preds = model.predict(X)
+    probs = model.predict_proba(X)[:, 1]
 
-    result_df = raw_df.copy()
-    result_df["Attrition Prediction"] = np.where(preds == 1, "Yes", "No")
-    result_df["Attrition Probability (%)"] = (probs * 100).round(2)
-    result_df["Risk Category"] = pd.cut(probs, bins=[-0.01, 0.3, 0.6, 1.0], labels=["Low Risk", "Moderate Risk", "High Risk"])
+    out = raw_df.copy()
+    out["Prediction"]  = np.where(preds == 1, "Yes", "No")
+    out["Probability"] = (probs * 100).round(2)
+    out["Risk"]        = [risk_label(p) for p in probs]
 
-    st.subheader("🧾 Prediction Results")
-    st.dataframe(result_df)
+    st.subheader("Results")
+    st.dataframe(out)
 
-    # SHAP
-    st.subheader("🧠 SHAP Explanations")
-    explainer = shap.Explainer(model)
-    shap_vals = explainer(df)
+    # SHAP beeswarm
+    st.subheader("Global SHAP Impact")
+    shap_vals = explainer(X)
     st.pyplot(shap.plots.beeswarm(shap_vals, show=False))
 
-    if not batch_mode:
-        st.subheader("🔍 Local Force Plot")
-        fig = shap.plots.force(explainer.expected_value[1], shap_vals[0].values, df.iloc[0], matplotlib=True, show=False)
-        st.pyplot(fig)
+    # Local force / waterfall for first row
+    if not batch:
+        st.subheader("Local Explanation")
+        try:
+            fig = shap.plots.force(
+                explainer.expected_value[1], shap_vals[0].values,
+                X.iloc[0], matplotlib=True, show=False
+            )
+            st.pyplot(fig)
+        except Exception:
+            fig, ax = plt.subplots()
+            shap.plots.waterfall(shap_vals[0], max_display=15, show=False)
+            st.pyplot(fig)
 
-    # Download
-    st.download_button("💾 Download Prediction CSV", data=result_df.to_csv(index=False), file_name="attrition_predictions.csv", mime="text/csv")
+    # download
+    st.download_button(
+        "Download CSV", out.to_csv(index=False), "attrition_predictions.csv", "text/csv"
+    )
 
