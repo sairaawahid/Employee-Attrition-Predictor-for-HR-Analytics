@@ -19,13 +19,13 @@ X_train = joblib.load("models/X_train.pkl")
 
 # Load model zoo for comparison (Feature 9)
 model_zoo = {
-    "Random Forest": joblib.load("models/random_forest_model.pkl"),
-    "Logistic Regression": joblib.load("models/logistic_regression_model.pkl"),
-    "Decision Tree": joblib.load("models/decision_tree_model.pkl"),
+    "Random Forest": joblib.load("models/rf_model.pkl"),
+    "Logistic Regression": joblib.load("models/logreg_model.pkl"),
+    "Decision Tree": joblib.load("models/tree_model.pkl"),
 }
 
 # Title and UI
-st.title("Employee Attrition Predictor")
+st.title("🔍 Employee Attrition Predictor")
 st.markdown("Use this app to predict the likelihood of employee attrition based on HR features.")
 
 st.sidebar.header("Input Employee Data")
