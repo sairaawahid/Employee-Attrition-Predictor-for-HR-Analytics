@@ -31,8 +31,6 @@
   "YearsInCurrentRole": "Years in current role.",
   "YearsSinceLastPromotion": "Years since last promotion.",
   "YearsWithCurrManager": "Years with current manager",
-
-  /* One-hot tooltip entries */
   "BusinessTravel_Travel_Frequently": "Employee frequently travels for business.",
   "BusinessTravel_Travel_Rarely": "Employee rarely travels for business.",
   "Department_Research & Development": "Employee in Research & Development department.",
