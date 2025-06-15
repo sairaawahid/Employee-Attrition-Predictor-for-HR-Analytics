@@ -148,7 +148,6 @@ st.markdown("### 🎯 Local Force Plot")
 fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0],
                         matplotlib=True, show=False)
 st.pyplot(fig3)
-st.caption("▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
 
 # ──────────────────────────────────────────────────────────────
 # 9.  🔬 INTERACTIVE FEATURE IMPACT VIEWER  (NEW)
