@@ -50,17 +50,19 @@ with st.expander("📘 How to use this app"):
         """
         1. **Enter employee details** in the sidebar or **upload a CSV** below.  
         2. View predicted **attrition risk, probability & risk card**.  
-        3. Inspect any employee via the row selector (for CSV).  
-        4. Review **SHAP charts** and **psychology-based HR tips**.  
-        5. Download the full prediction history as a CSV whenever you like.
+        3. Use the row selector (for CSV) to inspect any employee.  
+        4. Explore **SHAP charts** and interactively inspect single-feature impact.  
+        5. Download the full prediction history at the bottom.
         """
     )
 
-# ── CSV uploader lives here (main panel)
+# ──────────────────────────────────────────────────────────────
+# 4.  CSV UPLOAD (main panel)
+# ──────────────────────────────────────────────────────────────
 uploaded = st.file_uploader("📂 Upload Employee CSV (optional)", type="csv")
 
 # ──────────────────────────────────────────────────────────────
-# 4.  SIDEBAR INPUT FORM
+# 5.  SIDEBAR INPUT FORM
 # ──────────────────────────────────────────────────────────────
 st.sidebar.header("📋 Employee Attributes")
 
@@ -79,27 +81,25 @@ def user_input_features():
             data[col] = st.sidebar.slider(col, cmin, cmax, cmean, help=hint)
     return pd.DataFrame(data, index=[0])
 
-# ──────────────────────────────────────────────────────────────
-# 5.  BUILD INPUT DF
-# ──────────────────────────────────────────────────────────────
+# Build input frame
 if uploaded:
     raw_df = pd.read_csv(uploaded)
     st.success(f"Loaded **{len(raw_df)}** employees from CSV.")
 else:
     raw_df = user_input_features()
 
-# align columns
+# One-hot encode
 X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
 X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
 X_pred = X_enc.iloc[: len(raw_df)]
 
 # ──────────────────────────────────────────────────────────────
-# 6.  PREDICTIONS
+# 6.  PREDICT
 # ──────────────────────────────────────────────────────────────
 preds = model.predict(X_pred)
 probs = model.predict_proba(X_pred)[:, 1]
 
-if len(raw_df) > 1:                               # batch mode
+if len(raw_df) > 1:  # batch
     results = raw_df.copy()
     results["Prediction"]  = np.where(preds == 1, "Yes", "No")
     results["Probability"] = (probs * 100).round(1).astype(str) + " %"
@@ -111,7 +111,7 @@ if len(raw_df) > 1:                               # batch mode
     input_df = raw_df.iloc[[row_idx]]
     X_user   = X_pred.iloc[[row_idx]]
     pred, prob = preds[row_idx], probs[row_idx]
-else:                                              # single mode
+else:               # single
     input_df = raw_df
     X_user   = X_pred
     pred, prob = preds[0], probs[0]
@@ -151,7 +151,33 @@ st.pyplot(fig3)
 st.caption("▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
 
 # ──────────────────────────────────────────────────────────────
-# 9.  PSYCHOLOGY-BASED HR RECOMMENDATIONS
+# 9.  🔬 INTERACTIVE FEATURE IMPACT VIEWER  (NEW)
+# ──────────────────────────────────────────────────────────────
+st.markdown("## 🔬 Interactive Feature Impact Viewer")
+
+# Rank features by absolute SHAP value
+abs_vals = np.abs(shap_vals[0])
+sorted_idx = abs_vals.argsort()[::-1]
+feature_list = [X_user.columns[i] for i in sorted_idx]
+
+sel_feature = st.selectbox("Select a feature to inspect:", feature_list)
+
+# bar showing that feature's SHAP value
+idx = list(X_user.columns).index(sel_feature)
+feat_val  = X_user.iloc[0, idx]
+feat_shap = shap_vals[0][idx]
+
+fig_feat, ax_feat = plt.subplots(figsize=(4, 1.2))
+color = "red" if feat_shap > 0 else "blue"
+ax_feat.barh([sel_feature], [feat_shap], color=color)
+ax_feat.axvline(0, color="k", linewidth=.7)
+ax_feat.set_xlim(min(feat_shap, 0)*1.2, max(feat_shap, 0)*1.2)
+ax_feat.set_yticklabels([f"{sel_feature} = {feat_val}"])
+ax_feat.set_xlabel("SHAP value (impact on log-odds)")
+st.pyplot(fig_feat); plt.clf()
+
+# ──────────────────────────────────────────────────────────────
+# 10.  PSYCHOLOGY-BASED HR RECOMMENDATIONS
 # ──────────────────────────────────────────────────────────────
 st.subheader("🧠 Psychology-Based HR Recommendations")
 
@@ -189,52 +215,45 @@ rec_map = {
     "OverTime_Yes": "Regular overtime detected – assess workload and burnout risk."
 }
 
-tips = []
-def get_val(col):
+def safe_val(col):
     return input_df[col].iloc[0] if col in input_df.columns else None
 
-for col in ["JobSatisfaction", "EnvironmentSatisfaction",
-            "RelationshipSatisfaction", "JobInvolvement",
-            "WorkLifeBalance"]:
-    v = get_val(col)
-    if v in rec_map[col]:
-        tips.append(rec_map[col][v])
+tips = []
+for col in ["JobSatisfaction","EnvironmentSatisfaction",
+            "RelationshipSatisfaction","JobInvolvement","WorkLifeBalance"]:
+    v = safe_val(col)
+    if v in rec_map[col]: tips.append(rec_map[col][v])
 
 if "OverTime_Yes" in X_user.columns and X_user["OverTime_Yes"].iloc[0] == 1:
     tips.append(rec_map["OverTime_Yes"])
 
-for msg in tips:
-    st.info(msg)
-if not tips:
-    st.success("No critical psychological flags detected.")
+for txt in tips: st.info(txt)
+if not tips: st.success("No critical psychological flags found.")
 
 # ──────────────────────────────────────────────────────────────
-# 🔟  FEATURE 7 – PREDICTION HISTORY & DOWNLOAD
+# 11.  PREDICTION HISTORY + DOWNLOAD
 # ──────────────────────────────────────────────────────────────
 if "pred_history" not in st.session_state:
     st.session_state["pred_history"] = pd.DataFrame()
 
-# build current result(s) and append to history
 if len(raw_df) > 1:
-    hist_append = results.copy()
+    append_df = results.copy()
 else:
-    hist_append = input_df.copy()
-    hist_append["Prediction"]  = "Yes" if pred else "No"
-    hist_append["Probability"] = f"{prob:.1%}"
-    hist_append["Risk"]        = risk_tag.split()[1]
+    append_df = input_df.copy()
+    append_df["Prediction"]  = "Yes" if pred else "No"
+    append_df["Probability"] = f"{prob:.1%}"
+    append_df["Risk"]        = risk_tag.split()[1]
 
 st.session_state["pred_history"] = pd.concat(
-    [st.session_state["pred_history"], hist_append], ignore_index=True
+    [st.session_state["pred_history"], append_df], ignore_index=True
 )
 
 st.subheader("📥 Prediction History")
 st.dataframe(st.session_state["pred_history"])
 
-hist_csv = st.session_state["pred_history"].to_csv(index=False).encode("utf-8")
-st.download_button("💾 Download Prediction History CSV",
-                   data=hist_csv,
-                   file_name="prediction_history.csv",
-                   mime="text/csv")
+csv = st.session_state["pred_history"].to_csv(index=False).encode("utf-8")
+st.download_button("💾 Download Prediction History CSV", csv,
+                   file_name="prediction_history.csv", mime="text/csv")
 
 if st.button("🗑️ Clear History"):
     st.session_state["pred_history"] = pd.DataFrame()
