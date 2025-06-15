@@ -82,15 +82,11 @@ def sidebar_inputs() -> pd.DataFrame:
         else:  # numeric
             cmin, cmax, cmean = meta["min"], meta["max"], meta["mean"]
 
-            # Decide the correct Python type for this slider
             is_int = meta["dtype"].startswith("int")
+            cmin   = int(cmin) if is_int else float(cmin)
+            cmax   = int(cmax) if is_int else float(cmax)
+            cmean  = int(round(cmean)) if is_int else float(cmean)
 
-            # Cast defaults to matching type
-            cmin  = int(cmin)   if is_int else float(cmin)
-            cmax  = int(cmax)   if is_int else float(cmax)
-            cmean = int(round(cmean)) if is_int else float(cmean)
-
-            # Pull session value, cast & clamp to range
             session_val = st.session_state.get(key, cmean)
             try:
                 session_val = int(round(session_val)) if is_int else float(session_val)
@@ -98,11 +94,20 @@ def sidebar_inputs() -> pd.DataFrame:
                 session_val = cmean
             session_val = max(min(session_val, cmax), cmin)
 
-            data[col] = st.sidebar.slider(
-                col,
-                cmin, cmax, session_val,
-                key = key
-            )
+            # === NEW: if min == max, use number_input instead ===
+            if cmin == cmax:
+                data[col] = st.sidebar.number_input(
+                    col,
+                    value=session_val,
+                    key   = key
+                )
+            else:
+                data[col] = st.sidebar.slider(
+                    col,
+                    cmin, cmax, session_val,
+                    key = key
+                )
+                
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
