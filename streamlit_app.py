@@ -286,3 +286,30 @@ if st.button("🗑️ Clear History"):
     st.session_state[history_key] = pd.DataFrame()
     st.rerun()
 
+# ──────────────────────────────────────────────────────────────
+# 10. MODEL COMPARISON VIEW
+# ──────────────────────────────────────────────────────────────
+st.markdown("### 📊 Model Comparison View")
+st.write("Compare model metrics below. This helps HR teams choose a balance between accuracy and interpretability.")
+
+# Simulated model performance data
+model_performance = pd.DataFrame({
+    "Model": ["Random Forest", "XGBoost", "Logistic Regression", "Support Vector Machine"],
+    "Accuracy": [0.89, 0.91, 0.81, 0.83],
+    "Precision": [0.87, 0.90, 0.79, 0.82],
+    "Recall": [0.88, 0.89, 0.77, 0.81],
+    "F1 Score": [0.875, 0.895, 0.78, 0.815]
+})
+
+# Table with highlighted best metrics
+st.dataframe(model_performance.style.highlight_max(axis=0), use_container_width=True)
+
+# Bar chart for visual comparison
+st.markdown("#### 📉 Metrics Visualization")
+fig, ax = plt.subplots(figsize=(10, 5))
+model_performance.set_index("Model")[["Accuracy", "Precision", "Recall", "F1 Score"]].plot(kind="bar", ax=ax)
+plt.xticks(rotation=0)
+plt.ylabel("Score")
+plt.ylim(0.7, 1.0)
+plt.title("Model Performance Comparison")
+st.pyplot(fig)
