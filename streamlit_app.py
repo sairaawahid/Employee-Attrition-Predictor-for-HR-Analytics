@@ -1,174 +1,258 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import shap
 import joblib
-import json
+import shap
 import matplotlib.pyplot as plt
+import json
 from pathlib import Path
 from datetime import datetime
 
-st.set_page_config(layout="wide", page_title="Employee Attrition Predictor")
+# ──────────────────────────────────────────────────────────────
+# 1.  CACHED LOADERS
+# ──────────────────────────────────────────────────────────────
+@st.cache_resource
+def load_model():
+    return joblib.load("xgboost_optimized_model.pkl")
+
+@st.cache_data
+def load_schema():
+    return pd.read_json("employee_schema.json")
+
+@st.cache_data
+def load_stats():
+    return json.loads(Path("numeric_stats.json").read_text())
+
+@st.cache_data
+def load_tooltips():
+    return json.loads(Path("feature_tooltips.json").read_text())
+
+@st.cache_resource
+def get_explainer(_model):
+    return shap.TreeExplainer(_model)
 
 # ──────────────────────────────────────────────────────────────
-# 1. LOAD MODEL & METADATA
+# 2.  INITIALIZE
 # ──────────────────────────────────────────────────────────────
-model = joblib.load("xgboost_optimized_model.pkl")
+model      = load_model()
+schema     = load_schema()
+X_stats    = load_stats()
+tooltips   = load_tooltips()
+explainer  = get_explainer(model)
 
-with open("employee_schema.json") as f:
-    schema = json.load(f)
-with open("feature_tooltips.json") as f:
-    tooltips = json.load(f)
-
-explainer = shap.TreeExplainer(model)
-
-# ──────────────────────────────────────────────────────────────
-# 2. HELPER FUNCTIONS
-# ──────────────────────────────────────────────────────────────
-def is_cat(col):       # schema flag
-    return schema[col]["dtype"] == "object"
-
-def risk_label(p):
-    return "🟢 Low" if p < 0.30 else "🟡 Moderate" if p < 0.60 else "🔴 High"
-
-# sample row (same keys as schema)
-sample_employee = {
-    "Age": 32, "BusinessTravel": "Travel_Rarely", "DailyRate": 1100,
-    "Department": "Research & Development", "DistanceFromHome": 8,
-    "Education": 3, "EducationField": "Life Sciences",
-    "EnvironmentSatisfaction": 3, "Gender": "Male", "HourlyRate": 65,
-    "JobInvolvement": 3, "JobLevel": 2, "JobRole": "Research Scientist",
-    "JobSatisfaction": 2, "MaritalStatus": "Single", "MonthlyIncome": 5200,
-    "MonthlyRate": 14000, "NumCompaniesWorked": 2, "OverTime": "Yes",
-    "PercentSalaryHike": 13, "PerformanceRating": 3,
-    "RelationshipSatisfaction": 2, "StockOptionLevel": 1,
-    "TotalWorkingYears": 10, "TrainingTimesLastYear": 3,
-    "WorkLifeBalance": 2, "YearsAtCompany": 5, "YearsInCurrentRole": 3,
-    "YearsSinceLastPromotion": 1, "YearsWithCurrManager": 2,
-}
+if "history" not in st.session_state:
+    st.session_state["history"] = pd.DataFrame()
 
 # ──────────────────────────────────────────────────────────────
-# 3. SIDEBAR INPUTS
+# 3.  RISK CATEGORY
 # ──────────────────────────────────────────────────────────────
-def sidebar_inputs():
-    data = {}
-    for col, meta in schema.items():
-        key = f"inp_{col}"
-        tip = tooltips.get(col.split("_")[0], "")
-        if is_cat(col):                                   # categorical
-            opts = meta["options"]
-            current = st.session_state.get(key, opts[0])
-            if current not in opts:
-                current = opts[0]
-            data[col] = st.sidebar.selectbox(
-                col, opts, index=opts.index(current), key=key, help=tip
-            )
-        else:                                             # numeric
-            cmin, cmax, cmean = meta["min"], meta["max"], meta["mean"]
-            is_int = str(meta["dtype"]).startswith("int")
-            cast   = (lambda x: int(round(x))) if is_int else float
-            cmin, cmax, cmean = cast(cmin), cast(cmax), cast(cmean)
-
-            session_val = st.session_state.get(key, cmean)
-            try: session_val = cast(session_val)
-            except Exception: session_val = cmean
-            session_val = max(min(session_val, cmax), cmin)
-
-            # If range collapsed or slider fails, fallback to number_input
-            slider_possible = (abs(cmax - cmin) > 1e-9)
-            if not slider_possible:
-                data[col] = st.sidebar.number_input(col, value=session_val, key=key, help=tip)
-            else:
-                try:
-                    data[col] = st.sidebar.slider(
-                        col, cmin, cmax, session_val, key=key, help=tip
-                    )
-                except Exception:
-                    data[col] = st.sidebar.number_input(
-                        col, min_value=cmin, max_value=cmax,
-                        value=session_val, key=key, help=tip
-                    )
-    return pd.DataFrame([data])
-
-# callbacks
-def reset_form():
-    for col, meta in schema.items():
-        key = f"inp_{col}"
-        st.session_state[key] = meta["options"][0] if is_cat(col) else meta["mean"]
-
-def load_sample():
-    for col, val in sample_employee.items():
-        st.session_state[f"inp_{col}"] = val
+def label_risk(p):
+    if p < 0.30:
+        return "🟢 Low"
+    elif p < 0.60:
+        return "🟡 Moderate"
+    else:
+        return "🔴 High"
 
 # ──────────────────────────────────────────────────────────────
-# 4. HEADER & GUIDE
+# 4.  HEADER / GUIDE / CSV UPLOAD
 # ──────────────────────────────────────────────────────────────
-st.title("📊 Employee Attrition Predictor")
+st.title("Employee Attrition Predictor")
+st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
 
-with st.expander("ℹ️ Guide", expanded=True):
-    st.markdown("""
-1. **Enter data** in the sidebar or **upload CSV** for batch prediction  
-2. Press **Predict** to see risk & SHAP explanations  
-3. Use **Sample Data** for demo, **Reset** to clear
-""")
-    colA, colB = st.columns([1, 4])
-    colA.button("🔁 Reset", on_click=reset_form)
-    colB.button("🧪 Sample Data", on_click=load_sample)
-
-# ──────────────────────────────────────────────────────────────
-# 5. CSV UPLOAD OR SINGLE ENTRY
-# ──────────────────────────────────────────────────────────────
-uploaded = st.file_uploader("Upload CSV (optional)", type="csv")
-if uploaded:
-    raw_df = pd.read_csv(uploaded)
-    batch  = True
-else:
-    raw_df = sidebar_inputs()
-    batch  = False
-
-# ──────────────────────────────────────────────────────────────
-# 6. PREDICT BUTTON
-# ──────────────────────────────────────────────────────────────
-if st.button("🔮 Predict"):
-    # one-hot encode, align to model
-    X = pd.get_dummies(raw_df)
-    for feat in model.feature_names_in_:
-        if feat not in X:
-            X[feat] = 0
-    X = X[model.feature_names_in_]
-
-    preds = model.predict(X)
-    probs = model.predict_proba(X)[:, 1]
-
-    out = raw_df.copy()
-    out["Prediction"]  = np.where(preds == 1, "Yes", "No")
-    out["Probability"] = (probs * 100).round(2)
-    out["Risk"]        = [risk_label(p) for p in probs]
-
-    st.subheader("Results")
-    st.dataframe(out)
-
-    # SHAP beeswarm
-    st.subheader("Global SHAP Impact")
-    shap_vals = explainer(X)
-    st.pyplot(shap.plots.beeswarm(shap_vals, show=False))
-
-    # Local force / waterfall for first row
-    if not batch:
-        st.subheader("Local Explanation")
-        try:
-            fig = shap.plots.force(
-                explainer.expected_value[1], shap_vals[0].values,
-                X.iloc[0], matplotlib=True, show=False
-            )
-            st.pyplot(fig)
-        except Exception:
-            fig, ax = plt.subplots()
-            shap.plots.waterfall(shap_vals[0], max_display=15, show=False)
-            st.pyplot(fig)
-
-    # download
-    st.download_button(
-        "Download CSV", out.to_csv(index=False), "attrition_predictions.csv", "text/csv"
+with st.expander("📘 How to use this app"):
+    st.markdown(
+        """
+        1. **Enter employee details** in the sidebar or **upload a CSV** below.  
+        2. See **risk prediction, probability & SHAP explanations**.  
+        3. Use **Interactive Feature Impact** dropdown to inspect any feature.  
+        4. Download or clear **prediction history** at any time.  
+        5. *New:* Click **Use Sample Data** for a quick demo or **Reset Form** to start fresh.
+        """
     )
 
+uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
+
+# ──────────────────────────────────────────────────────────────
+# 5.  SIDEBAR INPUTS (WITH UNIQUE KEYS)
+# ──────────────────────────────────────────────────────────────
+st.sidebar.header("📋 Employee Attributes")
+
+def sidebar_inputs() -> pd.DataFrame:
+    data = {}
+    for col in schema.columns:
+        base  = col.split("_")[0]
+        tip   = tooltips.get(base, "")
+        key   = f"inp_{col}"
+        if schema[col].dtype == "object":
+            options = list(schema[col].unique())
+            data[col] = st.sidebar.selectbox(col, options, key=key, help=tip)
+        else:
+            if col in X_stats:
+                cmin  = float(X_stats[col]["min"])
+                cmax  = float(X_stats[col]["max"])
+                cmean = float(X_stats[col]["mean"])
+            else:
+                cmin, cmax, cmean = 0.0, 1.0, 0.5
+            data[col] = st.sidebar.slider(col, cmin, cmax, cmean, key=key, help=tip)
+    return pd.DataFrame(data, index=[0])
+
+# ──────────────────────────────────────────────────────────────
+# 6.  SAMPLE + RESET BUTTON LOGIC
+# ──────────────────────────────────────────────────────────────
+sample_employee = {
+    "Age": 32,
+    "BusinessTravel": "Travel_Rarely",
+    "DailyRate": 1100,
+    "Department": "Research & Development",
+    "DistanceFromHome": 8,
+    "Education": 3,
+    "EducationField": "Life Sciences",
+    "EnvironmentSatisfaction": 3,
+    "Gender": "Male",
+    "HourlyRate": 65,
+    "JobInvolvement": 3,
+    "JobLevel": 2,
+    "JobRole": "Research Scientist",
+    "JobSatisfaction": 2,
+    "MaritalStatus": "Single",
+    "MonthlyIncome": 5200,
+    "MonthlyRate": 14000,
+    "NumCompaniesWorked": 2,
+    "OverTime": "Yes",
+    "PercentSalaryHike": 13,
+    "PerformanceRating": 3,
+    "RelationshipSatisfaction": 2,
+    "StockOptionLevel": 1,
+    "TotalWorkingYears": 10,
+    "TrainingTimesLastYear": 3,
+    "WorkLifeBalance": 2,
+    "YearsAtCompany": 5,
+    "YearsInCurrentRole": 3,
+    "YearsSinceLastPromotion": 1,
+    "YearsWithCurrManager": 2,
+}
+
+def load_sample():
+    """Populate sidebar widgets with sample_employee values."""
+    for col, val in sample_employee.items():
+        key = f"inp_{col}"
+        # Clamp numeric values to slider bounds
+        if isinstance(val, (int, float, np.number)) and col in X_stats:
+            cmin = float(X_stats[col]["min"])
+            cmax = float(X_stats[col]["max"])
+            val  = max(min(val, cmax), cmin)
+        st.session_state[key] = val
+
+def reset_form():
+    """Return widgets to default slider mean or first selectbox option."""
+    for col in schema.columns:
+        key = f"inp_{col}"
+        if schema[col].dtype == "object":
+            default_val = list(schema[col].unique())[0]
+        else:
+            if col in X_stats:
+                default_val = float(X_stats[col]["mean"])
+            else:
+                default_val = 0.0
+        st.session_state[key] = default_val
+
+st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
+st.sidebar.button("🔄 Reset Form",     on_click=reset_form)
+
+# ──────────────────────────────────────────────────────────────
+# 7.  GET DATAFRAME (sidebar or csv)
+# ──────────────────────────────────────────────────────────────
+if uploaded_file:
+    raw_df = pd.read_csv(uploaded_file)
+    batch_mode = True
+else:
+    raw_df = sidebar_inputs()
+    batch_mode = False
+
+# ──────────────────────────────────────────────────────────────
+# 8.  PREDICTION PIPELINE
+# ──────────────────────────────────────────────────────────────
+X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
+X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
+X_user = X_enc.iloc[[0]]
+
+pred = model.predict(X_user)[0]
+prob = model.predict_proba(X_user)[0, 1]
+risk_cat = label_risk(prob)
+
+# ──────────────────────────────────────────────────────────────
+# 9.  METRICS
+# ──────────────────────────────────────────────────────────────
+st.subheader("Prediction")
+c1, c2, c3 = st.columns(3)
+c1.metric("Prediction", "Yes" if pred else "No")
+c2.metric("Probability", f"{prob:.1%}")
+c3.metric("Risk Category", risk_cat)
+
+# ──────────────────────────────────────────────────────────────
+# 10.  SHAP EXPLANATIONS
+# ──────────────────────────────────────────────────────────────
+st.subheader("🔍 SHAP Explanations")
+shap_vals = explainer.shap_values(X_user)
+if isinstance(shap_vals, list):
+    shap_vals = shap_vals[1]
+
+st.markdown("### 🌐 Global Impact — Beeswarm")
+fig1, _ = plt.subplots()
+shap.summary_plot(shap_vals, X_user, show=False)
+st.pyplot(fig1); plt.clf()
+
+st.markdown("### 🧭 Decision Path (Individual)")
+fig2, _ = plt.subplots()
+shap.decision_plot(explainer.expected_value, shap_vals[0], X_user, show=False)
+st.pyplot(fig2); plt.clf()
+
+st.markdown("### 🎯 Local Force Plot")
+try:
+    fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0],
+                            matplotlib=True, show=False)
+    st.pyplot(fig3)
+except Exception:
+    st.info("Force plot fallback to waterfall.")
+    fig3, _ = plt.subplots()
+    shap.plots.waterfall(
+        shap.Explanation(values=shap_vals[0],
+                         base_values=explainer.expected_value,
+                         data=X_user.iloc[0]),
+        max_display=15, show=False)
+    st.pyplot(fig3)
+
+st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
+
+# ──────────────────────────────────────────────────────────────
+# 11.  BATCH SUMMARY
+# ──────────────────────────────────────────────────────────────
+if batch_mode:
+    preds = model.predict(X_enc)
+    probs = model.predict_proba(X_enc)[:, 1]
+    out = raw_df.copy()
+    out["Prediction"]      = np.where(preds == 1, "Yes", "No")
+    out["Probability"]     = (probs * 100).round(1).astype(str)+" %"
+    out["Risk Category"]   = [label_risk(p) for p in probs]
+    st.markdown("### 📑 Batch Prediction Summary")
+    st.dataframe(out)
+
+# ──────────────────────────────────────────────────────────────
+# 12.  HISTORY
+# ──────────────────────────────────────────────────────────────
+append_df = raw_df.iloc[[0]].copy()
+append_df["Prediction"]  = "Yes" if pred else "No"
+append_df["Probability"] = f"{prob:.1%}"
+append_df["Risk Category"] = risk_cat
+append_df["Timestamp"]   = datetime.now().strftime("%Y-%m-%d %H:%M")
+st.session_state["history"] = pd.concat(
+    [st.session_state["history"], append_df], ignore_index=True)
+
+st.subheader("📥 Prediction History")
+st.dataframe(st.session_state["history"])
+csv = st.session_state["history"].to_csv(index=False).encode()
+st.download_button("💾 Download History", csv, "prediction_history.csv", "text/csv")
+if st.button("🗑️ Clear History"):
+    st.session_state["history"] = pd.DataFrame()
+    st.rerun()
