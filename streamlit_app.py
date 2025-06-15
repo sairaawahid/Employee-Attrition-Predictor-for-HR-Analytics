@@ -138,23 +138,21 @@ sample_employee = {
 
 def load_sample():
     """
-    Populate session_state keys with sample values, but clamp numeric
-    values to the slider bounds so Streamlit never throws a
-    StreamlitValueAboveMaxError.
+    Populate session_state with sample values while guaranteeing that
+    numeric values are clamped to the slider range.  No schema lookup,
+    so no KeyError.
     """
     for col, val in sample_employee.items():
         key = f"inp_{col}"
-        # If numeric column, clip to [cmin, cmax]
-        if pd.api.types.is_numeric_dtype(schema[col]):
+
+        # Treat numeric sample values (int, float) as numeric
+        if isinstance(val, (int, float, np.number)):
             if col in X_stats:
                 cmin = float(X_stats[col]["min"])
                 cmax = float(X_stats[col]["max"])
-                val_clamped = max(min(val, cmax), cmin)
-            else:
-                val_clamped = val
-            st.session_state[key] = val_clamped
-        else:
-            st.session_state[key] = val 
+                val = max(min(val, cmax), cmin)   # clamp
+        # For categorical just keep original value
+        st.session_state[key] = val 
 
 def reset_form():
     for col in schema.columns:
