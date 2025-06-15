@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import joblib
 import shap
+import matplotlib
 import matplotlib.pyplot as plt
 import json
 from pathlib import Path
@@ -230,30 +231,34 @@ for txt in tips: st.info(txt)
 if not tips: st.success("No critical psychological flags found.")
 
 # ──────────────────────────────────────────────────────────────
-# 11.  PREDICTION HISTORY + DOWNLOAD
+# 11.  PREDICTION HISTORY + DOWNLOAD  (patched)
 # ──────────────────────────────────────────────────────────────
-if "pred_history" not in st.session_state:
-    st.session_state["pred_history"] = pd.DataFrame()
+history_key = "pred_history"
+if history_key not in st.session_state:
+    st.session_state[history_key] = pd.DataFrame()
 
-if len(raw_df) > 1:
-    append_df = results.copy()
-else:
-    append_df = input_df.copy()
-    append_df["Prediction"]  = "Yes" if pred else "No"
-    append_df["Probability"] = f"{prob:.1%}"
-    append_df["Risk"]        = risk_tag.split()[1]
+# Append only if we have fresh predictions
+if "preds" in locals() and "probs" in locals():
+    if len(raw_df) > 1:
+        append_df = results.copy()
+    else:
+        append_df = input_df.copy()
+        append_df["Prediction"]  = "Yes" if pred else "No"
+        append_df["Probability"] = f"{prob:.1%}"
+        append_df["Risk"]        = risk_tag.split()[1]
 
-st.session_state["pred_history"] = pd.concat(
-    [st.session_state["pred_history"], append_df], ignore_index=True
-)
+    st.session_state[history_key] = pd.concat(
+        [st.session_state[history_key], append_df], ignore_index=True
+    )
 
 st.subheader("📥 Prediction History")
-st.dataframe(st.session_state["pred_history"])
+st.dataframe(st.session_state[history_key])
 
-csv = st.session_state["pred_history"].to_csv(index=False).encode("utf-8")
-st.download_button("💾 Download Prediction History CSV", csv,
+csv_bytes = st.session_state[history_key].to_csv(index=False).encode()
+st.download_button("💾 Download Prediction History", csv_bytes,
                    file_name="prediction_history.csv", mime="text/csv")
 
 if st.button("🗑️ Clear History"):
-    st.session_state["pred_history"] = pd.DataFrame()
+    st.session_state[history_key] = pd.DataFrame()
     st.experimental_rerun()
+
