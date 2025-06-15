@@ -145,10 +145,34 @@ fig2, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, shap_vals[0], X_user, show=False)
 st.pyplot(fig2); plt.clf()
 
-st.markdown("### 🎯 Local Force Plot")
-fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0],
-                        matplotlib=True, show=False)
-st.pyplot(fig3)
+st.markdown("### 🎯 Local Explanation")
+
+try:
+    # 1️⃣ Attempt the familiar force plot in matplotlib mode
+    fig_force = shap.plots.force(
+        explainer.expected_value,
+        shap_vals[0],
+        X_user.iloc[0],
+        matplotlib=True,
+        show=False
+    )
+    st.pyplot(fig_force)
+
+except Exception as e:
+    st.warning(
+        "Matplotlib force plot failed on this environment – "
+        "showing a waterfall plot instead."
+    )
+    # 2️⃣ Robust fallback: waterfall plot
+    fig_water, _ = plt.subplots()
+    shap.plots.waterfall(
+        shap.Explanation(values=shap_vals[0],
+                         base_values=explainer.expected_value,
+                         data=X_user.iloc[0]),
+        max_display=15, show=False
+    )
+    st.pyplot(fig_water)
+    plt.clf()
 
 # ──────────────────────────────────────────────────────────────
 # 9.  🔬 INTERACTIVE FEATURE IMPACT VIEWER  (NEW)
