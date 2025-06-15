@@ -48,22 +48,22 @@ st.markdown("Predict attrition risk and explore model explanations with **SHAP**
 with st.expander("📘 How to use this app"):
     st.markdown(
         """
-        1. **Enter employee details** in the sidebar **or** upload a CSV file.  
-        2. View predicted **attrition risk** and the color-coded risk card.  
-        3. Select an employee row (if CSV) to inspect individual SHAP plots.  
-        4. Use these insights to design proactive HR interventions.
+        1. **Enter employee details** in the sidebar *or* upload a CSV file.  
+        2. View **attrition prediction**, probability, and color-coded risk card.  
+        3. Use the **row selector** (when CSV uploaded) to inspect any employee.  
+        4. Scroll to **SHAP charts** and the **Interactive Feature Impact Viewer** for deeper insights.
         """
     )
 
 # ──────────────────────────────────────────────────────────────
-# 4.  SIDEBAR INPUTS (SINGLE EMPLOYEE)
+# 4.  SIDEBAR INPUT FORM
 # ──────────────────────────────────────────────────────────────
 st.sidebar.header("📋 Employee Attributes")
 
 def user_input_features() -> pd.DataFrame:
     data = {}
     for col in schema.columns:
-        base = col.split("_")[0]          # match tooltip for one-hot fields
+        base = col.split("_")[0]                 # base name for tooltip lookup
         tip  = feature_tooltips.get(base, "")
         if schema[col].dtype == "object":
             data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=tip)
@@ -84,94 +84,109 @@ def user_input_features() -> pd.DataFrame:
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
-# 5.  CSV UPLOAD OR MANUAL INPUT
+# 5.  CSV UPLOAD OR SINGLE ENTRY
 # ──────────────────────────────────────────────────────────────
 uploaded_file = st.file_uploader("📂 Upload Employee CSV", type=["csv"])
 
 if uploaded_file:
     raw_df = pd.read_csv(uploaded_file)
-    st.success(f"Loaded {len(raw_df)} employees from CSV.")
+    st.success(f"Loaded **{len(raw_df)}** employees from CSV.")
 else:
     raw_df = user_input_features()
 
-# One-hot encode & align with training schema
+# One-hot encode & align with training columns
 X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
 X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
 X_pred = X_enc.iloc[: len(raw_df)]
 
 # ──────────────────────────────────────────────────────────────
-# 6.  PREDICTION & RISK CARD(S)
+# 6.  PREDICTIONS & RISK CARDS / TABLE
 # ──────────────────────────────────────────────────────────────
 preds = model.predict(X_pred)
 probs = model.predict_proba(X_pred)[:, 1]
 
 if len(raw_df) == 1:
     pred, prob = preds[0], probs[0]
+    risk_label = "🟢 Low" if prob < 0.30 else "🟡 Moderate" if prob < 0.60 else "🔴 High"
 
-    # Risk category
-    risk_label = (
-        "🟢 Low"      if prob < 0.30 else
-        "🟡 Moderate" if prob < 0.60 else
-        "🔴 High"
-    )
+    st.subheader("Prediction")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Prediction", "Yes" if pred else "No")
+    c2.metric("Attrition Probability", f"{prob:.1%}")
+    c3.metric("Risk Category", risk_label)
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Prediction", "Yes" if pred else "No")
-    col2.metric("Attrition Probability", f"{prob:.1%}")
-    col3.metric("Risk Category", risk_label)
-
-else:
+else:  # batch mode
     results = raw_df.copy()
     results["Prediction"]  = np.where(preds == 1, "Yes", "No")
     results["Probability"] = (probs * 100).round(1).astype(str) + " %"
-    results["Risk"] = pd.cut(
-        probs, bins=[0, 0.30, 0.60, 1.00],
-        labels=["Low", "Moderate", "High"]
-    )
+    results["Risk"]        = pd.cut(probs, [0, .3, .6, 1], labels=["Low", "Moderate", "High"])
     st.subheader("📑 Batch Predictions")
     st.dataframe(results)
 
 # ──────────────────────────────────────────────────────────────
-# 7.  SHAP EXPLANATIONS
+# 7.  ROW SELECTOR FOR SHAP INSPECTION
 # ──────────────────────────────────────────────────────────────
 st.subheader("🔍 SHAP Explanations")
 
-# Row selector (only shown for batch mode)
 row_idx = 0
 if len(raw_df) > 1:
-    row_idx = st.number_input(
-        "Select employee row for detailed explanation:",
-        min_value=0, max_value=len(raw_df) - 1, step=1, value=0
-    )
-
+    row_idx = st.number_input("Select employee row to inspect:",
+                              min_value=0, max_value=len(raw_df) - 1, step=1, value=0)
 X_row       = X_pred.iloc[[row_idx]]
 shap_values = explainer.shap_values(X_row)
-if not isinstance(shap_values, np.ndarray):  # binary model returns list
+if not isinstance(shap_values, np.ndarray):  # list for binary
     shap_values = shap_values[1]
 
-# 7-A Global Beeswarm (for selected row input)
+# ───── 7-A Beeswarm
 st.markdown("### 🌐 Global Impact — Beeswarm")
 fig_bee, _ = plt.subplots()
 shap.summary_plot(shap_values, X_row, show=False)
 st.pyplot(fig_bee)
 plt.clf()
 
-# 7-B Decision Plot
+# ───── 7-B Decision plot
 st.markdown("### 🧭 Decision Path (Individual)")
 fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, shap_values[0], X_row, show=False)
 st.pyplot(fig_dec)
 plt.clf()
 
-# 7-C Force Plot
+# ───── 7-C Force plot
 st.markdown("### 🎯 Local Force Plot")
 fig_force = shap.plots.force(
-    explainer.expected_value,
-    shap_values[0],
-    X_row.iloc[0],
-    matplotlib=True,
-    show=False
+    explainer.expected_value, shap_values[0], X_row.iloc[0],
+    matplotlib=True, show=False
 )
 st.pyplot(fig_force)
 
-st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
+# ──────────────────────────────────────────────────────────────
+# 8.  FEATURE 5 – INTERACTIVE FEATURE IMPACT VIEWER
+# ──────────────────────────────────────────────────────────────
+st.markdown("## 🔬 Interactive Feature Impact Viewer")
+
+# Rank features by |SHAP|
+abs_shap = np.abs(shap_values[0])
+sorted_idx = np.argsort(abs_shap)[::-1]
+sorted_features = [X_row.columns[i] for i in sorted_idx]
+
+selected_feature = st.selectbox(
+    "Choose a feature to view its SHAP contribution:",
+    sorted_features
+)
+
+feat_idx = list(X_row.columns).index(selected_feature)
+feat_value = X_row.iloc[0, feat_idx]
+feat_shap  = shap_values[0][feat_idx]
+
+# Simple bar plot: single feature contribution
+fig_feat, ax_feat = plt.subplots(figsize=(4, 1.2))
+color = "red" if feat_shap > 0 else "blue"
+ax_feat.barh([selected_feature], [feat_shap], color=color)
+ax_feat.set_xlabel("SHAP value (impact on log-odds)")
+ax_feat.set_xlim(min(0, feat_shap) * 1.2, max(0, feat_shap) * 1.2)
+ax_feat.axvline(0, color="k", linewidth=.8)
+ax_feat.set_yticklabels([f"{selected_feature} = {feat_value}"])
+st.pyplot(fig_feat)
+plt.clf()
+
+st.caption("▲ Positive SHAP pushes toward leaving; ▼ negative pushes toward staying.")
