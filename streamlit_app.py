@@ -16,16 +16,9 @@ def load_model():
     return joblib.load("xgboost_optimized_model.pkl")
 
 @st.cache_data
-def load_schema():
-    return pd.read_json("employee_schema.json")
-
-@st.cache_data
-def load_stats():
-    return json.loads(Path("numeric_stats.json").read_text())
-
-@st.cache_data
-def load_tooltips():
-    return json.loads(Path("feature_tooltips.json").read_text())
+def load_schema() -> dict:
+    """Load the corrected JSON schema (dtype + stats/options)."""
+    return json.loads(Path("employee_schema.json").read_text())
 
 @st.cache_resource
 def get_explainer(_model):
@@ -34,11 +27,9 @@ def get_explainer(_model):
 # ──────────────────────────────────────────────────────────────
 # 2.  INITIALIZE
 # ──────────────────────────────────────────────────────────────
-model      = load_model()
-schema     = load_schema()
-X_stats    = load_stats()
-tooltips   = load_tooltips()
-explainer  = get_explainer(model)
+model     = load_model()
+schema    = load_schema()          # dict: {col: {dtype: .., options/min/max}}
+explainer = get_explainer(model)
 
 if "history" not in st.session_state:
     st.session_state["history"] = pd.DataFrame()
@@ -47,15 +38,10 @@ if "history" not in st.session_state:
 # 3.  RISK CATEGORY
 # ──────────────────────────────────────────────────────────────
 def label_risk(p):
-    if p < 0.30:
-        return "🟢 Low"
-    elif p < 0.60:
-        return "🟡 Moderate"
-    else:
-        return "🔴 High"
+    return "🟢 Low" if p < 0.30 else "🟡 Moderate" if p < 0.60 else "🔴 High"
 
 # ──────────────────────────────────────────────────────────────
-# 4.  HEADER / GUIDE / CSV UPLOAD
+# 4.  HEADER / GUIDE / CSV
 # ──────────────────────────────────────────────────────────────
 st.title("Employee Attrition Predictor")
 st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
@@ -63,76 +49,54 @@ st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
 with st.expander("📘 How to use this app"):
     st.markdown(
         """
-        1. **Enter employee details** in the sidebar or **upload a CSV** below.  
-        2. See **risk prediction, probability & SHAP explanations**.  
-        3. Use **Interactive Feature Impact** dropdown to inspect any feature.  
-        4. Download or clear **prediction history** at any time.  
-        5. *New:* Click **Use Sample Data** for a quick demo or **Reset Form** to start fresh.
+        1. Enter employee details in the sidebar **or upload a CSV**.  
+        2. View risk prediction, probability & SHAP explanations.  
+        3. Use **Use Sample Data** for a demo or **Reset Form** to start fresh.  
         """
     )
-
 uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
 
 # ──────────────────────────────────────────────────────────────
-# 5.  SIDEBAR INPUTS (WITH UNIQUE KEYS)
+# 5.  SIDEBAR WIDGETS
 # ──────────────────────────────────────────────────────────────
 st.sidebar.header("📋 Employee Attributes")
 
 def sidebar_inputs() -> pd.DataFrame:
-    """Render all sidebar widgets and return a single-row DataFrame
-       reflecting the current input values.
-
-       • Categorical: selectbox, default = first option or session value
-       • Numeric   : slider, default = mean or clamped session value
-    """
+    """Render widgets per schema and return a single-row DataFrame."""
     data = {}
-    for col in schema.columns:
-        base  = col.split("_")[0]
-        tip   = tooltips.get(base, "")
+    for col, meta in schema.items():
+        dtype = meta["dtype"]
         key   = f"inp_{col}"
 
-        # ---- categorical ---------------------------------------------------
-        if schema[col].dtype == "object":
-            options      = list(schema[col].unique())
-            session_val  = st.session_state.get(key, options[0])
-            # fall back to first option if session value not in list
-            if session_val not in options:
-                session_val = options[0]
+        if dtype == "object":
+            options      = meta["options"]
+            session_def  = st.session_state.get(key, options[0])
+            if session_def not in options:
+                session_def = options[0]
             data[col] = st.sidebar.selectbox(
                 col, options,
-                index = options.index(session_val),
-                key   = key,
-                help  = tip
+                index = options.index(session_def),
+                key   = key
             )
 
-        # ---- numeric -------------------------------------------------------
-        else:
-            if col in X_stats:
-                cmin  = float(X_stats[col]["min"])
-                cmax  = float(X_stats[col]["max"])
-                cmean = float(X_stats[col]["mean"])
-            else:
-                cmin, cmax, cmean = 0.0, 1.0, 0.5
-
-            # Pull any session value and ensure it’s a valid float in range
+        else:  # numeric slider
+            cmin, cmax, cmean = meta["min"], meta["max"], meta["mean"]
             session_val = st.session_state.get(key, cmean)
+            # ensure numeric & in range
             try:
                 session_val = float(session_val)
             except Exception:
                 session_val = cmean
-            # clamp
-            session_val = min(max(session_val, cmin), cmax)
+            session_val = max(min(session_val, cmax), cmin)
 
             data[col] = st.sidebar.slider(
                 col, cmin, cmax, session_val,
-                key  = key,
-                help = tip
+                key = key
             )
-
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
-# 6.  SAMPLE + RESET BUTTON LOGIC
+# 6.  SAMPLE & RESET BUTTONS
 # ──────────────────────────────────────────────────────────────
 sample_employee = {
     "Age": 32,
@@ -168,34 +132,31 @@ sample_employee = {
 }
 
 def load_sample():
-    """Populate sidebar widgets with sample_employee values."""
+    """Populate widgets with sample_employee values."""
     for col, val in sample_employee.items():
         key = f"inp_{col}"
-        # Clamp numeric values to slider bounds
-        if isinstance(val, (int, float, np.number)) and col in X_stats:
-            cmin = float(X_stats[col]["min"])
-            cmax = float(X_stats[col]["max"])
-            val  = max(min(val, cmax), cmin)
+        if schema[col]["dtype"] == "object":
+            if val not in schema[col]["options"]:
+                val = schema[col]["options"][0]
+        else:
+            vmin, vmax = schema[col]["min"], schema[col]["max"]
+            val = max(min(val, vmax), vmin)
         st.session_state[key] = val
 
 def reset_form():
-    """Return widgets to default slider mean or first selectbox option."""
-    for col in schema.columns:
+    """Reset widgets to default (mean for numeric, first option for categorical)."""
+    for col, meta in schema.items():
         key = f"inp_{col}"
-        if schema[col].dtype == "object":
-            default_val = list(schema[col].unique())[0]
+        if meta["dtype"] == "object":
+            st.session_state[key] = meta["options"][0]
         else:
-            if col in X_stats:
-                default_val = float(X_stats[col]["mean"])
-            else:
-                default_val = 0.0
-        st.session_state[key] = default_val
+            st.session_state[key] = meta["mean"]
 
 st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
 st.sidebar.button("🔄 Reset Form",     on_click=reset_form)
 
 # ──────────────────────────────────────────────────────────────
-# 7.  GET DATAFRAME (sidebar or csv)
+# 7.  DATAFRAME SOURCE
 # ──────────────────────────────────────────────────────────────
 if uploaded_file:
     raw_df = pd.read_csv(uploaded_file)
@@ -205,10 +166,10 @@ else:
     batch_mode = False
 
 # ──────────────────────────────────────────────────────────────
-# 8.  PREDICTION PIPELINE
+# 8.  PREDICTION
 # ──────────────────────────────────────────────────────────────
-X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
-X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
+X_full = pd.concat([raw_df], ignore_index=True)
+X_enc  = pd.get_dummies(X_full).reindex(columns=schema.keys(), fill_value=0)
 X_user = X_enc.iloc[[0]]
 
 pred = model.predict(X_user)[0]
@@ -260,15 +221,15 @@ except Exception:
 st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
 
 # ──────────────────────────────────────────────────────────────
-# 11.  BATCH SUMMARY
+# 11.  BATCH SUMMARY (if CSV provided)
 # ──────────────────────────────────────────────────────────────
 if batch_mode:
     preds = model.predict(X_enc)
     probs = model.predict_proba(X_enc)[:, 1]
     out = raw_df.copy()
-    out["Prediction"]      = np.where(preds == 1, "Yes", "No")
-    out["Probability"]     = (probs * 100).round(1).astype(str)+" %"
-    out["Risk Category"]   = [label_risk(p) for p in probs]
+    out["Prediction"]    = np.where(preds == 1, "Yes", "No")
+    out["Probability"]   = (probs * 100).round(1).astype(str)+" %"
+    out["Risk Category"] = [label_risk(p) for p in probs]
     st.markdown("### 📑 Batch Prediction Summary")
     st.dataframe(out)
 
@@ -281,12 +242,13 @@ append_df["Probability"] = f"{prob:.1%}"
 append_df["Risk Category"] = risk_cat
 append_df["Timestamp"]   = datetime.now().strftime("%Y-%m-%d %H:%M")
 st.session_state["history"] = pd.concat(
-    [st.session_state["history"], append_df], ignore_index=True)
+    [st.session_state["history"], append_df], ignore_index=True
+)
 
 st.subheader("📥 Prediction History")
 st.dataframe(st.session_state["history"])
-csv = st.session_state["history"].to_csv(index=False).encode()
-st.download_button("💾 Download History", csv, "prediction_history.csv", "text/csv")
+csv_hist = st.session_state["history"].to_csv(index=False).encode()
+st.download_button("💾 Download History", csv_hist, "prediction_history.csv", "text/csv")
 if st.button("🗑️ Clear History"):
     st.session_state["history"] = pd.DataFrame()
     st.rerun()
