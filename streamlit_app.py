@@ -48,18 +48,19 @@ st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
 with st.expander("📘 How to use this app"):
     st.markdown(
         """
-        1. **Enter employee details** in the sidebar *or* **upload a CSV** below.  
-        2. View predicted **attrition risk, probability and risk card**.  
-        3. Use **SHAP charts** and **row selector** (for CSV) to inspect individuals.  
-        4. Apply the **psychology-based tips** to design HR interventions.
+        1. **Enter employee details** in the sidebar or **upload a CSV** below.  
+        2. View predicted **attrition risk, probability & risk card**.  
+        3. Inspect any employee via the row selector (for CSV).  
+        4. Review **SHAP charts** and **psychology-based HR tips**.  
+        5. Download the full prediction history as a CSV whenever you like.
         """
     )
 
-# 🔽 CSV uploader now lives right here (not in sidebar)
+# ── CSV uploader lives here (main panel)
 uploaded = st.file_uploader("📂 Upload Employee CSV (optional)", type="csv")
 
 # ──────────────────────────────────────────────────────────────
-# 4.  SIDEBAR FORM (single employee)
+# 4.  SIDEBAR INPUT FORM
 # ──────────────────────────────────────────────────────────────
 st.sidebar.header("📋 Employee Attributes")
 
@@ -67,19 +68,19 @@ def user_input_features():
     data = {}
     for col in schema.columns:
         base = col.split("_")[0]
-        tip  = tooltips.get(base, "")
+        hint = tooltips.get(base, "")
         if schema[col].dtype == "object":
-            data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=tip)
+            data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=hint)
         else:
             if col in X_stats:
                 cmin, cmax, cmean = map(float, [X_stats[col]["min"], X_stats[col]["max"], X_stats[col]["mean"]])
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
-            data[col] = st.sidebar.slider(col, cmin, cmax, cmean, help=tip)
+            data[col] = st.sidebar.slider(col, cmin, cmax, cmean, help=hint)
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
-# 5.  BUILD INPUT DF (single or batch)
+# 5.  BUILD INPUT DF
 # ──────────────────────────────────────────────────────────────
 if uploaded:
     raw_df = pd.read_csv(uploaded)
@@ -87,18 +88,18 @@ if uploaded:
 else:
     raw_df = user_input_features()
 
-# One-hot encode to training schema
+# align columns
 X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
 X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
 X_pred = X_enc.iloc[: len(raw_df)]
 
 # ──────────────────────────────────────────────────────────────
-# 6.  PREDICTION & DISPLAY
+# 6.  PREDICTIONS
 # ──────────────────────────────────────────────────────────────
 preds = model.predict(X_pred)
 probs = model.predict_proba(X_pred)[:, 1]
 
-if len(raw_df) > 1:                   # batch mode
+if len(raw_df) > 1:                               # batch mode
     results = raw_df.copy()
     results["Prediction"]  = np.where(preds == 1, "Yes", "No")
     results["Probability"] = (probs * 100).round(1).astype(str) + " %"
@@ -110,7 +111,7 @@ if len(raw_df) > 1:                   # batch mode
     input_df = raw_df.iloc[[row_idx]]
     X_user   = X_pred.iloc[[row_idx]]
     pred, prob = preds[row_idx], probs[row_idx]
-else:                                 # single mode
+else:                                              # single mode
     input_df = raw_df
     X_user   = X_pred
     pred, prob = preds[0], probs[0]
@@ -119,7 +120,6 @@ else:                                 # single mode
 # 7.  METRIC CARDS
 # ──────────────────────────────────────────────────────────────
 st.subheader("Prediction")
-
 risk_tag = "🟢 Low" if prob < .3 else "🟡 Moderate" if prob < .6 else "🔴 High"
 c1, c2, c3 = st.columns(3)
 c1.metric("Prediction", "Yes" if pred else "No")
@@ -148,10 +148,10 @@ st.markdown("### 🎯 Local Force Plot")
 fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0],
                         matplotlib=True, show=False)
 st.pyplot(fig3)
-st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
+st.caption("▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
 
 # ──────────────────────────────────────────────────────────────
-# 9.  PSYCHOLOGY-BASED HR RECOMMENDATIONS (KeyError-safe)
+# 9.  PSYCHOLOGY-BASED HR RECOMMENDATIONS
 # ──────────────────────────────────────────────────────────────
 st.subheader("🧠 Psychology-Based HR Recommendations")
 
@@ -171,8 +171,8 @@ rec_map = {
     "RelationshipSatisfaction": {
         1: "Poor coworker relations – consider team-building or mediation.",
         2: "Average relations – encourage open communication.",
-        3: "Healthy relations.",
-        4: "Strong coworker relationships."
+        3: "Healthy coworker relations.",
+        4: "Strong relationships – leverage for mentoring."
     },
     "JobInvolvement": {
         1: "Low involvement – clarify goals and recognize achievements.",
@@ -181,32 +181,61 @@ rec_map = {
         4: "Highly involved – potential leader."
     },
     "WorkLifeBalance": {
-        1: "Poor balance – offer flexibility or workload review.",
-        2: "Risk of imbalance – monitor hours.",
+        1: "Work-life conflict – consider flexibility and workload review.",
+        2: "At risk of imbalance – monitor hours.",
         3: "Healthy balance.",
-        4: "Excellent balance."
+        4: "Excellent work-life balance."
     },
-    "OverTime_Yes": "Regular overtime detected – assess workload and risk of burnout."
+    "OverTime_Yes": "Regular overtime detected – assess workload and burnout risk."
 }
 
 tips = []
-
-def safe_value(df, col):
-    return df[col].values[0] if col in df.columns else None
+def get_val(col):
+    return input_df[col].iloc[0] if col in input_df.columns else None
 
 for col in ["JobSatisfaction", "EnvironmentSatisfaction",
             "RelationshipSatisfaction", "JobInvolvement",
             "WorkLifeBalance"]:
-    val = safe_value(input_df, col)
-    if val in rec_map[col]:
-        tips.append(rec_map[col][val])
+    v = get_val(col)
+    if v in rec_map[col]:
+        tips.append(rec_map[col][v])
 
-# Overtime flag (needs one-hot)
 if "OverTime_Yes" in X_user.columns and X_user["OverTime_Yes"].iloc[0] == 1:
     tips.append(rec_map["OverTime_Yes"])
 
-if tips:
-    for t in tips:
-        st.info(t)
+for msg in tips:
+    st.info(msg)
+if not tips:
+    st.success("No critical psychological flags detected.")
+
+# ──────────────────────────────────────────────────────────────
+# 🔟  FEATURE 7 – PREDICTION HISTORY & DOWNLOAD
+# ──────────────────────────────────────────────────────────────
+if "pred_history" not in st.session_state:
+    st.session_state["pred_history"] = pd.DataFrame()
+
+# build current result(s) and append to history
+if len(raw_df) > 1:
+    hist_append = results.copy()
 else:
-    st.success("No major psychological red flags detected; continue current support.")
+    hist_append = input_df.copy()
+    hist_append["Prediction"]  = "Yes" if pred else "No"
+    hist_append["Probability"] = f"{prob:.1%}"
+    hist_append["Risk"]        = risk_tag.split()[1]
+
+st.session_state["pred_history"] = pd.concat(
+    [st.session_state["pred_history"], hist_append], ignore_index=True
+)
+
+st.subheader("📥 Prediction History")
+st.dataframe(st.session_state["pred_history"])
+
+hist_csv = st.session_state["pred_history"].to_csv(index=False).encode("utf-8")
+st.download_button("💾 Download Prediction History CSV",
+                   data=hist_csv,
+                   file_name="prediction_history.csv",
+                   mime="text/csv")
+
+if st.button("🗑️ Clear History"):
+    st.session_state["pred_history"] = pd.DataFrame()
+    st.experimental_rerun()
