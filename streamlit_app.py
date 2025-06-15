@@ -79,16 +79,33 @@ uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
 st.sidebar.header("📋 Employee Attributes")
 
 def sidebar_inputs() -> pd.DataFrame:
+    """Render all sidebar widgets and return a single-row DataFrame
+       reflecting the current input values.
+
+       • Categorical: selectbox, default = first option or session value
+       • Numeric   : slider, default = mean or clamped session value
+    """
     data = {}
     for col in schema.columns:
         base  = col.split("_")[0]
         tip   = tooltips.get(base, "")
         key   = f"inp_{col}"
 
+        # ---- categorical ---------------------------------------------------
         if schema[col].dtype == "object":
-            options = list(schema[col].unique())
-            default = st.session_state.get(key, options[0])
-            data[col] = st.sidebar.selectbox(col, options, key=key, index=options.index(default), help=tip)
+            options      = list(schema[col].unique())
+            session_val  = st.session_state.get(key, options[0])
+            # fall back to first option if session value not in list
+            if session_val not in options:
+                session_val = options[0]
+            data[col] = st.sidebar.selectbox(
+                col, options,
+                index = options.index(session_val),
+                key   = key,
+                help  = tip
+            )
+
+        # ---- numeric -------------------------------------------------------
         else:
             if col in X_stats:
                 cmin  = float(X_stats[col]["min"])
@@ -96,8 +113,21 @@ def sidebar_inputs() -> pd.DataFrame:
                 cmean = float(X_stats[col]["mean"])
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
-            default = st.session_state.get(key, cmean)
-            data[col] = st.sidebar.slider(col, cmin, cmax, default, key=key, help=tip)
+
+            # Pull any session value and ensure it’s a valid float in range
+            session_val = st.session_state.get(key, cmean)
+            try:
+                session_val = float(session_val)
+            except Exception:
+                session_val = cmean
+            # clamp
+            session_val = min(max(session_val, cmin), cmax)
+
+            data[col] = st.sidebar.slider(
+                col, cmin, cmax, session_val,
+                key  = key,
+                help = tip
+            )
 
     return pd.DataFrame(data, index=[0])
 
