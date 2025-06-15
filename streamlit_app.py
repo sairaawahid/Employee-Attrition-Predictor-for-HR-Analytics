@@ -260,5 +260,5 @@ st.download_button("💾 Download Prediction History", csv_bytes,
 
 if st.button("🗑️ Clear History"):
     st.session_state[history_key] = pd.DataFrame()
-    st.experimental_rerun()
+    st.rerun()
 
