@@ -6,6 +6,7 @@ import shap
 import matplotlib.pyplot as plt
 import json
 from pathlib import Path
+from datetime import datetime
 
 # ──────────────────────────────────────────────────────────────
 # 1.  CACHED LOADERS
@@ -33,162 +34,214 @@ def get_explainer(_model):
 # ──────────────────────────────────────────────────────────────
 # 2.  INITIALIZE
 # ──────────────────────────────────────────────────────────────
-model   = load_model()
-schema  = load_schema()
-X_stats = load_stats()
-feature_tooltips = load_tooltips()
-explainer = get_explainer(model)
+model      = load_model()
+schema     = load_schema()
+X_stats    = load_stats()
+tooltips   = load_tooltips()
+explainer  = get_explainer(model)
 
 if "history" not in st.session_state:
     st.session_state["history"] = pd.DataFrame()
 
 # ──────────────────────────────────────────────────────────────
-# 3.  RISK CATEGORY LABEL FUNCTION
+# 3.  RISK CATEGORY
 # ──────────────────────────────────────────────────────────────
-def label_risk(prob):
-    if prob < 0.30:
+def label_risk(p):
+    if p < 0.30:
         return "🟢 Low"
-    elif prob < 0.60:
+    elif p < 0.60:
         return "🟡 Moderate"
     else:
         return "🔴 High"
 
 # ──────────────────────────────────────────────────────────────
-# 4.  TITLE / GUIDE / UPLOAD SECTION
+# 4.  HEADER / GUIDE / CSV UPLOAD
 # ──────────────────────────────────────────────────────────────
 st.title("Employee Attrition Predictor")
-st.markdown("Predict attrition risk and explore model explanations with **SHAP**.")
+st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
 
 with st.expander("📘 How to use this app"):
     st.markdown(
-        '''
-        1. **Enter employee details** in the sidebar or **upload a CSV** to score multiple employees.  
-        2. The main panel updates with **attrition risk & probability**.  
-        3. Scroll to **SHAP charts** to see which features drive the prediction.  
-        4. Use the row selector (when a CSV is uploaded) to inspect individual employees.  
-        5. Use these insights to design targeted HR interventions.
-        '''
+        """
+        1. **Enter employee details** in the sidebar or **upload a CSV** below.  
+        2. See **risk prediction, probability & SHAP explanations**.  
+        3. Use **Interactive Feature Impact** dropdown to inspect any feature.  
+        4. Download or clear **prediction history** at any time.  
+        5. *New:* Try **Use Sample Data** for a quick demo or **Reset Form** to start fresh.
+        """
     )
-    uploaded_file = st.file_uploader("📤 Upload Your Own CSV (Batch Prediction)", type="csv")
 
+uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
+
+# ──────────────────────────────────────────────────────────────
+# 5.  SIDEBAR INPUTS (WITH UNIQUE KEYS)
+# ──────────────────────────────────────────────────────────────
 st.sidebar.header("📋 Employee Attributes")
 
-# ──────────────────────────────────────────────────────────────
-# 5.  INPUT FUNCTION WITH TOOLTIP SUPPORT
-# ──────────────────────────────────────────────────────────────
-def user_input_features() -> pd.DataFrame:
+def sidebar_inputs() -> pd.DataFrame:
     data = {}
     for col in schema.columns:
-        base_col = col.split("_")[0]
-        tooltip = feature_tooltips.get(base_col, "")
+        base  = col.split("_")[0]
+        tip   = tooltips.get(base, "")
+        key   = f"inp_{col}"          # unique key for reset & sample
         if schema[col].dtype == "object":
-            data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=tooltip)
+            data[col] = st.sidebar.selectbox(
+                col, schema[col].unique(), key=key, help=tip
+            )
         else:
             if col in X_stats:
-                cmin = float(X_stats[col]["min"])
-                cmax = float(X_stats[col]["max"])
-                cmean = float(X_stats[col]["mean"])
+                cmin, cmax, cmean = map(float, [X_stats[col]["min"],
+                                                 X_stats[col]["max"],
+                                                 X_stats[col]["mean"]])
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
-            data[col] = st.sidebar.slider(col, cmin, cmax, cmean, help=tooltip)
+            data[col] = st.sidebar.slider(
+                col, cmin, cmax, cmean, key=key, help=tip
+            )
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
-# 6.  MAIN LOGIC – SINGLE PREDICTION OR CSV BATCH
+# 6.  FEATURE 12 – USE SAMPLE DATA & FEATURE 11 – RESET FORM
 # ──────────────────────────────────────────────────────────────
-use_batch = False
-if uploaded_file:
-    uploaded_df = pd.read_csv(uploaded_file)
-    X_full = pd.concat([uploaded_df, schema]).drop_duplicates(keep="first")
-    X_encoded = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
-    X_user = X_encoded.iloc[0:1]
-    use_batch = True
-else:
-    input_df = user_input_features()
-    X_full = pd.concat([input_df, schema]).drop_duplicates(keep="first")
-    X_encoded = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
-    X_user = X_encoded.iloc[[0]]
+sample_employee = {
+    "Age": 32,
+    "BusinessTravel": "Travel_Rarely",
+    "DailyRate": 1100,
+    "Department": "Research & Development",
+    "DistanceFromHome": 8,
+    "Education": 3,
+    "EducationField": "Life Sciences",
+    "EnvironmentSatisfaction": 3,
+    "Gender": "Male",
+    "HourlyRate": 65,
+    "JobInvolvement": 3,
+    "JobLevel": 2,
+    "JobRole": "Research Scientist",
+    "JobSatisfaction": 2,
+    "MaritalStatus": "Single",
+    "MonthlyIncome": 5200,
+    "MonthlyRate": 14000,
+    "NumCompaniesWorked": 2,
+    "OverTime": "Yes",
+    "PercentSalaryHike": 13,
+    "PerformanceRating": 3,
+    "RelationshipSatisfaction": 2,
+    "StockOptionLevel": 1,
+    "TotalWorkingYears": 10,
+    "TrainingTimesLastYear": 3,
+    "WorkLifeBalance": 2,
+    "YearsAtCompany": 5,
+    "YearsInCurrentRole": 3,
+    "YearsSinceLastPromotion": 1,
+    "YearsWithCurrManager": 2,
+}
+
+def load_sample():
+    for col, val in sample_employee.items():
+        key = f"inp_{col}"
+        st.session_state[key] = val
+
+def reset_form():
+    for col in schema.columns:
+        st.session_state.pop(f"inp_{col}", None)
+
+use_sample = st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
+reset_btn  = st.sidebar.button("🔄 Reset Form", on_click=reset_form)
 
 # ──────────────────────────────────────────────────────────────
-# 7.  PREDICTION + RISK LABELING
+# 7.  GET DATAFRAME (sidebar or csv)
 # ──────────────────────────────────────────────────────────────
+if uploaded_file:
+    raw_df = pd.read_csv(uploaded_file)
+    batch_mode = True
+else:
+    raw_df = sidebar_inputs()
+    batch_mode = False
+
+# ──────────────────────────────────────────────────────────────
+# 8.  PREDICTION PIPELINE
+# ──────────────────────────────────────────────────────────────
+X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
+X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
+X_user = X_enc.iloc[[0]]
+
 pred = model.predict(X_user)[0]
 prob = model.predict_proba(X_user)[0, 1]
-risk_category = label_risk(prob)
+risk_cat = label_risk(prob)
 
 # ──────────────────────────────────────────────────────────────
-# 8.  METRIC CARDS
+# 9.  METRICS
 # ──────────────────────────────────────────────────────────────
 st.subheader("Prediction")
-col1, col2, col3 = st.columns(3)
-col1.metric("Prediction", "Yes" if pred else "No")
-col2.metric("Attrition Probability", f"{prob:.1%}")
-col3.metric("Risk Category", risk_category)
+c1, c2, c3 = st.columns(3)
+c1.metric("Prediction", "Yes" if pred else "No")
+c2.metric("Probability", f"{prob:.1%}")
+c3.metric("Risk Category", risk_cat)
 
 # ──────────────────────────────────────────────────────────────
-# 9.  SHAP EXPLANATIONS
+# 10.  SHAP EXPLANATIONS
 # ──────────────────────────────────────────────────────────────
 st.subheader("🔍 SHAP Explanations")
 shap_vals = explainer.shap_values(X_user)
-shap_vals = shap_vals if isinstance(shap_vals, np.ndarray) else shap_vals[1]
+if isinstance(shap_vals, list):
+    shap_vals = shap_vals[1]
 
 st.markdown("### 🌐 Global Impact — Beeswarm")
-fig1, ax1 = plt.subplots()
+fig1, _ = plt.subplots()
 shap.summary_plot(shap_vals, X_user, show=False)
-st.pyplot(fig1)
-plt.clf()
+st.pyplot(fig1); plt.clf()
 
 st.markdown("### 🧭 Decision Path (Individual)")
-fig2, ax2 = plt.subplots()
+fig2, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, shap_vals[0], X_user, show=False)
-st.pyplot(fig2)
-plt.clf()
+st.pyplot(fig2); plt.clf()
 
+# Local force or waterfall fallback
 st.markdown("### 🎯 Local Force Plot")
-fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0], matplotlib=True, show=False)
-st.pyplot(fig3)
+try:
+    fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0],
+                            matplotlib=True, show=False)
+    st.pyplot(fig3)
+except Exception:
+    st.info("Force plot fallback to waterfall.")
+    fig3, _ = plt.subplots()
+    shap.plots.waterfall(
+        shap.Explanation(values=shap_vals[0],
+                         base_values=explainer.expected_value,
+                         data=X_user.iloc[0]),
+        max_display=15, show=False)
+    st.pyplot(fig3)
 st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
 
 # ──────────────────────────────────────────────────────────────
-# 10.  OPTIONAL: CSV BATCH MODE VIEW / INSPECTION
+# 11.  BATCH SUMMARY (remain unchanged)
 # ──────────────────────────────────────────────────────────────
-if use_batch:
-    results = uploaded_df.copy()
-    results["Prediction"] = model.predict(X_encoded)
-    results["Attrition Probability"] = model.predict_proba(X_encoded)[:, 1]
-    results["Prediction"] = results["Prediction"].map({1: "Yes", 0: "No"})
-    results["Risk Category"] = model.predict_proba(X_encoded)[:, 1].apply(label_risk)
-    results["Attrition Probability"] = results["Attrition Probability"].apply(lambda p: f"{p:.1%}")
-
-    st.markdown("### 📊 Batch Prediction Summary")
-    st.dataframe(results)
-
-    selected_row = st.selectbox("Select employee for SHAP inspection", results.index)
-    if selected_row is not None:
-        X_user = X_encoded.iloc[[selected_row]]
-        shap_vals = explainer.shap_values(X_user)
-        shap_vals = shap_vals if isinstance(shap_vals, np.ndarray) else shap_vals[1]
-
-        st.markdown("### 🔍 SHAP Re-Inspection")
-        fig4, ax4 = plt.subplots()
-        shap.decision_plot(explainer.expected_value, shap_vals[0], X_user, show=False)
-        st.pyplot(fig4)
-        plt.clf()
+if batch_mode:
+    preds = model.predict(X_enc)
+    probs = model.predict_proba(X_enc)[:, 1]
+    out = raw_df.copy()
+    out["Prediction"]  = np.where(preds == 1, "Yes", "No")
+    out["Probability"] = (probs * 100).round(1).astype(str)+" %"
+    out["Risk Category"] = [label_risk(p) for p in probs]
+    st.markdown("### 📑 Batch Prediction Summary")
+    st.dataframe(out)
 
 # ──────────────────────────────────────────────────────────────
-# 11.  DOWNLOADABLE HISTORY
+# 12.  ADD TO HISTORY
 # ──────────────────────────────────────────────────────────────
-append_df = input_df.copy() if not use_batch else uploaded_df.iloc[[selected_row]]
-append_df["Prediction"] = "Yes" if pred else "No"
-append_df["Attrition Probability"] = f"{prob:.1%}"
-append_df["Risk Category"] = risk_category
-st.session_state["history"] = pd.concat([st.session_state["history"], append_df], ignore_index=True)
+append_df = raw_df.iloc[[0]].copy()
+append_df["Prediction"]  = "Yes" if pred else "No"
+append_df["Probability"] = f"{prob:.1%}"
+append_df["Risk Category"] = risk_cat
+append_df["Timestamp"]   = datetime.now().strftime("%Y-%m-%d %H:%M")
+st.session_state["history"] = pd.concat(
+    [st.session_state["history"], append_df], ignore_index=True
+)
 
-st.markdown("### 📥 Download Prediction History")
-if not st.session_state["history"].empty:
-    st.dataframe(st.session_state["history"])
-    csv_data = st.session_state["history"].to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv_data, "prediction_history.csv", "text/csv")
-
-    if st.button("Clear History"):
-        st.session_state["history"] = pd.DataFrame()
+st.subheader("📥 Prediction History")
+st.dataframe(st.session_state["history"])
+csv = st.session_state["history"].to_csv(index=False).encode()
+st.download_button("💾 Download History", csv, "prediction_history.csv", "text/csv")
+if st.button("🗑️ Clear History"):
+    st.session_state["history"] = pd.DataFrame()
+    st.rerun()
