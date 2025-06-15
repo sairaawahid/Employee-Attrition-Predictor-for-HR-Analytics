@@ -192,42 +192,55 @@ plt.clf()
 st.caption("▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
 
 # ──────────────────────────────────────────────────────────────
-# 9.  PSYCHOLOGY-POWERED HR RECOMMENDATIONS
+# 9.  PSYCHOLOGY-BASED HR RECOMMENDATIONS
 # ──────────────────────────────────────────────────────────────
-st.subheader("🧠 HR Recommendations Based on Psychology")
+st.subheader("🧠 Psychology-Based HR Recommendations")
 
-rec_msgs = []
+tips = []
+rec = {
+    "JobSatisfaction": {
+        1: "Very low job satisfaction. Consider role changes or engagement programs.",
+        2: "Moderate dissatisfaction — explore internal mobility or mentoring.",
+        3: "Generally satisfied. Sustain engagement.",
+        4: "Highly satisfied — continue current support."
+    },
+    "EnvironmentSatisfaction": {
+        1: "Poor environment rating. Check ergonomics or team climate.",
+        2: "Mediocre satisfaction — ask for feedback.",
+        3: "Supportive environment likely.",
+        4: "Excellent satisfaction with work setting."
+    },
+    "RelationshipSatisfaction": {
+        1: "Poor peer relations — offer team-building or communication training.",
+        2: "May benefit from interpersonal coaching.",
+        3: "Workplace climate appears fair.",
+        4: "Strong relationships — a retention strength."
+    },
+    "JobInvolvement": {
+        1: "Low involvement. Try goal setting or recognition.",
+        2: "Could improve with motivation or autonomy.",
+        3: "Engaged employee.",
+        4: "Highly involved — sustain momentum."
+    },
+    "WorkLifeBalance": {
+        1: "Work-life conflict. Consider flexible work policies.",
+        2: "At risk of imbalance — check workloads.",
+        3: "Balance is healthy.",
+        4: "Excellent balance — reinforce this culture."
+    },
+    "OverTime_Yes": "Regular overtime flagged. Watch for burnout or overload."
+}
 
-# 1. Satisfaction-related
-jsat = input_df.get("JobSatisfaction", [None])[0]
-if jsat in psych_recommendations["JobSatisfaction"]:
-    rec_msgs.append(psych_recommendations["JobSatisfaction"][jsat])
+for f in ["JobSatisfaction", "EnvironmentSatisfaction", "RelationshipSatisfaction", "JobInvolvement", "WorkLifeBalance"]:
+    score = input_df.get(f, [None])[0]
+    if score in rec[f]:
+        tips.append(rec[f][score])
 
-envsat = input_df.get("EnvironmentSatisfaction", [None])[0]
-if envsat in psych_recommendations["EnvironmentSatisfaction"]:
-    rec_msgs.append(psych_recommendations["EnvironmentSatisfaction"][envsat])
+if "OverTime_Yes" in X_selected.columns and X_selected["OverTime_Yes"].iloc[0] == 1:
+    tips.append(rec["OverTime_Yes"])
 
-relsat = input_df.get("RelationshipSatisfaction", [None])[0]
-if relsat in psych_recommendations["RelationshipSatisfaction"]:
-    rec_msgs.append(psych_recommendations["RelationshipSatisfaction"][relsat])
-
-# 2. Engagement & balance
-involvement = input_df.get("JobInvolvement", [None])[0]
-if involvement in psych_recommendations["JobInvolvement"]:
-    rec_msgs.append(psych_recommendations["JobInvolvement"][involvement])
-
-wlb = input_df.get("WorkLifeBalance", [None])[0]
-if wlb in psych_recommendations["WorkLifeBalance"]:
-    rec_msgs.append(psych_recommendations["WorkLifeBalance"][wlb])
-
-# 3. Overtime
-if "OverTime_Yes" in X_user.columns and X_user["OverTime_Yes"].iloc[0] == 1:
-    rec_msgs.append(psych_recommendations["OverTime_Yes"])
-
-# Show collected recommendations
-if rec_msgs:
-    for rec in rec_msgs:
-        st.info(rec)
+if tips:
+    for msg in tips:
+        st.info(msg)
 else:
-    st.success("No major psychological concerns detected. Keep supporting this employee proactively!")
-
+    st.success("No major psychological flags. Maintain support and communication.")
