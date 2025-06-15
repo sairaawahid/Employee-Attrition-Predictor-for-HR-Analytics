@@ -256,35 +256,3 @@ st.download_button("💾 Download History", hist_csv, "prediction_history.csv", 
 if st.button("🗑️ Clear History"):
     st.session_state["history"] = pd.DataFrame()
     st.rerun()
-
-# ──────────────────────────────────────────────────────────────
-# 14.  FEATURE 11 – CHATBOT-STYLE HR GUIDANCE
-# ──────────────────────────────────────────────────────────────
-st.markdown("## 💬 HR Assistant Chatbot")
-def assistant_reply(msg: str, risk_label: str) -> str:
-    msg_lower = msg.lower()
-    if "retain" in msg_lower or "keep" in msg_lower:
-        base = "Focus on intrinsic motivators, career growth, and work-life balance."
-        add  = ""
-        if "high" in risk_label.lower():   add = "  Immediate action is advised because risk is high."
-        elif "moderate" in risk_label.lower(): add = "  Consider pulse-surveys and manager check-ins."
-        else: add = "  Keep up the good practices that support engagement."
-        return base + add
-    if "reason" in msg_lower or "why" in msg_lower:
-        return "Check the top SHAP features. High positive SHAP values push the employee toward leaving."
-    if "tip" in msg_lower or "suggest" in msg_lower:
-        return "Offer flexible schedules, recognize achievements, and provide clear career paths."
-    return "I'm here to help interpret the results and suggest retention actions. Ask me anything!"
-
-# display chat history
-for is_user, txt in st.session_state["chat"]:
-    align = "user" if is_user else "assistant"
-    with st.chat_message(align):
-        st.markdown(txt)
-
-prompt = st.chat_input("Ask the HR Assistant…")
-if prompt:
-    st.session_state["chat"].append((True, prompt))
-    response = assistant_reply(prompt, risk_cat)
-    st.session_state["chat"].append((False, response))
-    st.rerun()
