@@ -67,7 +67,7 @@ with st.expander("📘 How to use this app"):
         2. See **risk prediction, probability & SHAP explanations**.  
         3. Use **Interactive Feature Impact** dropdown to inspect any feature.  
         4. Download or clear **prediction history** at any time.  
-        5. *New:* Try **Use Sample Data** for a quick demo or **Reset Form** to start fresh.
+        5. *New:* Click **Use Sample Data** for a quick demo or **Reset Form** to start fresh.
         """
     )
 
@@ -83,25 +83,22 @@ def sidebar_inputs() -> pd.DataFrame:
     for col in schema.columns:
         base  = col.split("_")[0]
         tip   = tooltips.get(base, "")
-        key   = f"inp_{col}"          # unique key for reset & sample
+        key   = f"inp_{col}"
         if schema[col].dtype == "object":
-            data[col] = st.sidebar.selectbox(
-                col, schema[col].unique(), key=key, help=tip
-            )
+            options = list(schema[col].unique())
+            data[col] = st.sidebar.selectbox(col, options, key=key, help=tip)
         else:
             if col in X_stats:
-                cmin, cmax, cmean = map(float, [X_stats[col]["min"],
-                                                 X_stats[col]["max"],
-                                                 X_stats[col]["mean"]])
+                cmin  = float(X_stats[col]["min"])
+                cmax  = float(X_stats[col]["max"])
+                cmean = float(X_stats[col]["mean"])
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
-            data[col] = st.sidebar.slider(
-                col, cmin, cmax, cmean, key=key, help=tip
-            )
+            data[col] = st.sidebar.slider(col, cmin, cmax, cmean, key=key, help=tip)
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
-# 6.  FEATURE 12 – USE SAMPLE DATA & FEATURE 11 – RESET FORM
+# 6.  SAMPLE + RESET BUTTON LOGIC
 # ──────────────────────────────────────────────────────────────
 sample_employee = {
     "Age": 32,
@@ -137,29 +134,31 @@ sample_employee = {
 }
 
 def load_sample():
-    """
-    Populate session_state with sample values while guaranteeing that
-    numeric values are clamped to the slider range.  No schema lookup,
-    so no KeyError.
-    """
+    """Populate sidebar widgets with sample_employee values."""
     for col, val in sample_employee.items():
         key = f"inp_{col}"
-
-        # Treat numeric sample values (int, float) as numeric
-        if isinstance(val, (int, float, np.number)):
-            if col in X_stats:
-                cmin = float(X_stats[col]["min"])
-                cmax = float(X_stats[col]["max"])
-                val = max(min(val, cmax), cmin)   # clamp
-        # For categorical just keep original value
-        st.session_state[key] = val 
+        # Clamp numeric values to slider bounds
+        if isinstance(val, (int, float, np.number)) and col in X_stats:
+            cmin = float(X_stats[col]["min"])
+            cmax = float(X_stats[col]["max"])
+            val  = max(min(val, cmax), cmin)
+        st.session_state[key] = val
 
 def reset_form():
+    """Return widgets to default slider mean or first selectbox option."""
     for col in schema.columns:
-        st.session_state.pop(f"inp_{col}", None)
+        key = f"inp_{col}"
+        if schema[col].dtype == "object":
+            default_val = list(schema[col].unique())[0]
+        else:
+            if col in X_stats:
+                default_val = float(X_stats[col]["mean"])
+            else:
+                default_val = 0.0
+        st.session_state[key] = default_val
 
-use_sample = st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
-reset_btn  = st.sidebar.button("🔄 Reset Form", on_click=reset_form)
+st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
+st.sidebar.button("🔄 Reset Form",     on_click=reset_form)
 
 # ──────────────────────────────────────────────────────────────
 # 7.  GET DATAFRAME (sidebar or csv)
@@ -209,7 +208,6 @@ fig2, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, shap_vals[0], X_user, show=False)
 st.pyplot(fig2); plt.clf()
 
-# Local force or waterfall fallback
 st.markdown("### 🎯 Local Force Plot")
 try:
     fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0],
@@ -224,23 +222,24 @@ except Exception:
                          data=X_user.iloc[0]),
         max_display=15, show=False)
     st.pyplot(fig3)
+
 st.caption("Positive SHAP values push toward leaving; negative values push toward staying.")
 
 # ──────────────────────────────────────────────────────────────
-# 11.  BATCH SUMMARY (remain unchanged)
+# 11.  BATCH SUMMARY
 # ──────────────────────────────────────────────────────────────
 if batch_mode:
     preds = model.predict(X_enc)
     probs = model.predict_proba(X_enc)[:, 1]
     out = raw_df.copy()
-    out["Prediction"]  = np.where(preds == 1, "Yes", "No")
-    out["Probability"] = (probs * 100).round(1).astype(str)+" %"
-    out["Risk Category"] = [label_risk(p) for p in probs]
+    out["Prediction"]      = np.where(preds == 1, "Yes", "No")
+    out["Probability"]     = (probs * 100).round(1).astype(str)+" %"
+    out["Risk Category"]   = [label_risk(p) for p in probs]
     st.markdown("### 📑 Batch Prediction Summary")
     st.dataframe(out)
 
 # ──────────────────────────────────────────────────────────────
-# 12.  ADD TO HISTORY
+# 12.  HISTORY
 # ──────────────────────────────────────────────────────────────
 append_df = raw_df.iloc[[0]].copy()
 append_df["Prediction"]  = "Yes" if pred else "No"
@@ -248,8 +247,7 @@ append_df["Probability"] = f"{prob:.1%}"
 append_df["Risk Category"] = risk_cat
 append_df["Timestamp"]   = datetime.now().strftime("%Y-%m-%d %H:%M")
 st.session_state["history"] = pd.concat(
-    [st.session_state["history"], append_df], ignore_index=True
-)
+    [st.session_state["history"], append_df], ignore_index=True)
 
 st.subheader("📥 Prediction History")
 st.dataframe(st.session_state["history"])
