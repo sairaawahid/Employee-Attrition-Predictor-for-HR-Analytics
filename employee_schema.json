@@ -1,1 +1,234 @@
-{"Age":{"0":1.1033615115},"DailyRate":{"0":1.0474561081},"DistanceFromHome":{"0":-0.8875151111},"Education":{"0":1.0617867539},"EnvironmentSatisfaction":{"0":-0.6605306744},"HourlyRate":{"0":-0.9295679979},"JobInvolvement":{"0":1.785510994},"JobLevel":{"0":1.7496101475},"JobSatisfaction":{"0":-0.6608531809},"MonthlyIncome":{"0":2.0119749521},"MonthlyRate":{"0":0.9518692244},"NumCompaniesWorked":{"0":1.3242258335},"PercentSalaryHike":{"0":-0.3305890744},"PerformanceRating":{"0":-0.426230015},"RelationshipSatisfaction":{"0":0.2662325768},"StockOptionLevel":{"0":2.5899937141},"TotalWorkingYears":{"0":2.278233644},"TrainingTimesLastYear":{"0":-0.6201892227},"WorkLifeBalance":{"0":0.3380961638},"YearsAtCompany":{"0":-0.6544537372},"YearsInCurrentRole":{"0":-0.6154915796},"YearsSinceLastPromotion":{"0":-0.3687152874},"YearsWithCurrManager":{"0":-0.5952272283},"BusinessTravel_Travel_Frequently":{"0":false},"BusinessTravel_Travel_Rarely":{"0":true},"Department_Research & Development":{"0":false},"Department_Sales":{"0":true},"EducationField_Life Sciences":{"0":true},"EducationField_Marketing":{"0":false},"EducationField_Medical":{"0":false},"EducationField_Other":{"0":false},"EducationField_Technical Degree":{"0":false},"Gender_Male":{"0":false},"JobRole_Human Resources":{"0":false},"JobRole_Laboratory Technician":{"0":false},"JobRole_Manager":{"0":true},"JobRole_Manufacturing Director":{"0":false},"JobRole_Research Director":{"0":false},"JobRole_Research Scientist":{"0":false},"JobRole_Sales Executive":{"0":false},"JobRole_Sales Representative":{"0":false},"MaritalStatus_Married":{"0":false},"MaritalStatus_Single":{"0":false},"OverTime_Yes":{"0":false}}
+{
+  "Age": {
+    "dtype": "int64",
+    "min": 18,
+    "max": 60,
+    "mean": 36.923809523809524
+  },
+  "Attrition": {
+    "dtype": "object",
+    "options": [
+      "No",
+      "Yes"
+    ]
+  },
+  "BusinessTravel": {
+    "dtype": "object",
+    "options": [
+      "Non-Travel",
+      "Travel_Frequently",
+      "Travel_Rarely"
+    ]
+  },
+  "DailyRate": {
+    "dtype": "int64",
+    "min": 102,
+    "max": 1499,
+    "mean": 802.4857142857143
+  },
+  "Department": {
+    "dtype": "object",
+    "options": [
+      "Human Resources",
+      "Research & Development",
+      "Sales"
+    ]
+  },
+  "DistanceFromHome": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 29,
+    "mean": 9.19251700680272
+  },
+  "Education": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 5,
+    "mean": 2.912925170068027
+  },
+  "EducationField": {
+    "dtype": "object",
+    "options": [
+      "Human Resources",
+      "Life Sciences",
+      "Marketing",
+      "Medical",
+      "Other",
+      "Technical Degree"
+    ]
+  },
+  "EmployeeCount": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 1,
+    "mean": 1.0
+  },
+  "EmployeeNumber": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 2068,
+    "mean": 1024.865306122449
+  },
+  "EnvironmentSatisfaction": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 4,
+    "mean": 2.721768707482993
+  },
+  "Gender": {
+    "dtype": "object",
+    "options": [
+      "Female",
+      "Male"
+    ]
+  },
+  "HourlyRate": {
+    "dtype": "int64",
+    "min": 30,
+    "max": 100,
+    "mean": 65.89115646258503
+  },
+  "JobInvolvement": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 4,
+    "mean": 2.7299319727891156
+  },
+  "JobLevel": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 5,
+    "mean": 2.0639455782312925
+  },
+  "JobRole": {
+    "dtype": "object",
+    "options": [
+      "Healthcare Representative",
+      "Human Resources",
+      "Laboratory Technician",
+      "Manager",
+      "Manufacturing Director",
+      "Research Director",
+      "Research Scientist",
+      "Sales Executive",
+      "Sales Representative"
+    ]
+  },
+  "JobSatisfaction": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 4,
+    "mean": 2.7285714285714286
+  },
+  "MaritalStatus": {
+    "dtype": "object",
+    "options": [
+      "Divorced",
+      "Married",
+      "Single"
+    ]
+  },
+  "MonthlyIncome": {
+    "dtype": "int64",
+    "min": 1009,
+    "max": 19999,
+    "mean": 6502.931292517007
+  },
+  "MonthlyRate": {
+    "dtype": "int64",
+    "min": 2094,
+    "max": 26999,
+    "mean": 14313.103401360544
+  },
+  "NumCompaniesWorked": {
+    "dtype": "int64",
+    "min": 0,
+    "max": 9,
+    "mean": 2.6931972789115646
+  },
+  "Over18": {
+    "dtype": "object",
+    "options": [
+      "Y"
+    ]
+  },
+  "OverTime": {
+    "dtype": "object",
+    "options": [
+      "No",
+      "Yes"
+    ]
+  },
+  "PercentSalaryHike": {
+    "dtype": "int64",
+    "min": 11,
+    "max": 25,
+    "mean": 15.209523809523809
+  },
+  "PerformanceRating": {
+    "dtype": "int64",
+    "min": 3,
+    "max": 4,
+    "mean": 3.1537414965986397
+  },
+  "RelationshipSatisfaction": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 4,
+    "mean": 2.7122448979591836
+  },
+  "StandardHours": {
+    "dtype": "int64",
+    "min": 80,
+    "max": 80,
+    "mean": 80.0
+  },
+  "StockOptionLevel": {
+    "dtype": "int64",
+    "min": 0,
+    "max": 3,
+    "mean": 0.7938775510204081
+  },
+  "TotalWorkingYears": {
+    "dtype": "int64",
+    "min": 0,
+    "max": 40,
+    "mean": 11.279591836734694
+  },
+  "TrainingTimesLastYear": {
+    "dtype": "int64",
+    "min": 0,
+    "max": 6,
+    "mean": 2.7993197278911564
+  },
+  "WorkLifeBalance": {
+    "dtype": "int64",
+    "min": 1,
+    "max": 4,
+    "mean": 2.7612244897959184
+  },
+  "YearsAtCompany": {
+    "dtype": "int64",
+    "min": 0,
+    "max": 40,
+    "mean": 7.0081632653061225
+  },
+  "YearsInCurrentRole": {
+    "dtype": "int64",
+    "min": 0,
+    "max": 18,
+    "mean": 4.229251700680272
+  },
+  "YearsSinceLastPromotion": {
+    "dtype": "int64",
+    "min": 0,
+    "max": 15,
+    "mean": 2.1877551020408164
+  },
+  "YearsWithCurrManager": {
+    "dtype": "int64",
+    "min": 0,
+    "max": 17,
+    "mean": 4.12312925170068
+  }
+}
