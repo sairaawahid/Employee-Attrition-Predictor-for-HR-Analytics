@@ -33,14 +33,14 @@ def get_explainer(_model):
 # ──────────────────────────────────────────────────────────────
 # 2.  INITIALIZE
 # ──────────────────────────────────────────────────────────────
-model            = load_model()
-schema           = load_schema()
-X_stats          = load_stats()
-feature_tooltips = load_tooltips()
-explainer        = get_explainer(model)
+model   = load_model()
+schema  = load_schema()
+X_stats = load_stats()
+tooltips = load_tooltips()
+explainer = get_explainer(model)
 
 # ──────────────────────────────────────────────────────────────
-# 3.  PAGE HEADER
+# 3.  TITLE & GUIDE
 # ──────────────────────────────────────────────────────────────
 st.title("Employee Attrition Predictor")
 st.markdown("Predict attrition risk and explore model explanations with **SHAP**.")
@@ -48,185 +48,145 @@ st.markdown("Predict attrition risk and explore model explanations with **SHAP**
 with st.expander("📘 How to use this app"):
     st.markdown(
         """
-        1. **Enter employee details** in the sidebar *or* upload a CSV file.  
-        2. View **attrition prediction**, probability, and color-coded risk card.  
-        3. Use the **row selector** (when CSV uploaded) to inspect any employee.  
-        4. Scroll to **SHAP charts** and the **Interactive Feature Impact Viewer** for deeper insights.
+        1. **Enter employee details** in the sidebar or **upload a CSV** for batch predictions.  
+        2. Results update with **risk prediction & explanations**.  
+        3. Use SHAP charts to understand feature importance.  
+        4. Inspect individual employees from the uploaded CSV.  
+        5. Use the psychology-based suggestions to guide HR strategy.
         """
     )
 
-# ──────────────────────────────────────────────────────────────
-# 4.  SIDEBAR INPUT FORM
-# ──────────────────────────────────────────────────────────────
 st.sidebar.header("📋 Employee Attributes")
 
-def user_input_features() -> pd.DataFrame:
+# ──────────────────────────────────────────────────────────────
+# 4.  INPUT OR CSV UPLOAD
+# ──────────────────────────────────────────────────────────────
+def user_input_features():
     data = {}
     for col in schema.columns:
-        base = col.split("_")[0]                 # base name for tooltip lookup
-        tip  = feature_tooltips.get(base, "")
+        base = col.split("_")[0]
+        hint = tooltips.get(base, "")
         if schema[col].dtype == "object":
-            data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=tip)
+            data[col] = st.sidebar.selectbox(col, schema[col].unique(), help=hint)
         else:
             if col in X_stats:
-                cmin, cmax, cmean = (
-                    float(X_stats[col]["min"]),
-                    float(X_stats[col]["max"]),
-                    float(X_stats[col]["mean"]),
-                )
+                cmin, cmax, cmean = map(float, [X_stats[col]["min"], X_stats[col]["max"], X_stats[col]["mean"]])
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
-            data[col] = (
-                st.sidebar.number_input(col, value=cmin, help=tip)
-                if cmin == cmax
-                else st.sidebar.slider(col, cmin, cmax, cmean, help=tip)
-            )
+            data[col] = st.sidebar.slider(col, cmin, cmax, cmean, help=hint)
     return pd.DataFrame(data, index=[0])
 
-# ──────────────────────────────────────────────────────────────
-# 5.  CSV UPLOAD OR SINGLE ENTRY
-# ──────────────────────────────────────────────────────────────
-uploaded_file = st.file_uploader("📂 Upload Employee CSV", type=["csv"])
+uploaded = st.sidebar.file_uploader("📂 Upload CSV", type="csv")
 
-if uploaded_file:
-    raw_df = pd.read_csv(uploaded_file)
-    st.success(f"Loaded **{len(raw_df)}** employees from CSV.")
+if uploaded:
+    df = pd.read_csv(uploaded)
+    df_full = pd.concat([df, schema]).drop_duplicates(keep="first")
+    X_all = pd.get_dummies(df_full).reindex(columns=schema.columns, fill_value=0)
+    X_user = X_all.iloc[:len(df)]
+    preds = model.predict(X_user)
+    probs = model.predict_proba(X_user)[:, 1]
+    df["Prediction"] = np.where(preds == 1, "Yes", "No")
+    df["Attrition Probability"] = (probs * 100).round(1).astype(str) + "%"
+    st.subheader("📊 Batch Predictions")
+    index = st.selectbox("Select employee row:", df.index)
+    input_df = df.iloc[[index]].drop(columns=["Prediction", "Attrition Probability"], errors="ignore")
+    X_selected = X_user.iloc[[index]]
+    pred, prob = preds[index], probs[index]
+    st.dataframe(df)
 else:
-    raw_df = user_input_features()
-
-# One-hot encode & align with training columns
-X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
-X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
-X_pred = X_enc.iloc[: len(raw_df)]
-
-# ──────────────────────────────────────────────────────────────
-# 6.  PREDICTIONS & RISK CARDS / TABLE
-# ──────────────────────────────────────────────────────────────
-preds = model.predict(X_pred)
-probs = model.predict_proba(X_pred)[:, 1]
-
-if len(raw_df) == 1:
-    pred, prob = preds[0], probs[0]
-    risk_label = "🟢 Low" if prob < 0.30 else "🟡 Moderate" if prob < 0.60 else "🔴 High"
-
-    st.subheader("Prediction")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Prediction", "Yes" if pred else "No")
-    c2.metric("Attrition Probability", f"{prob:.1%}")
-    c3.metric("Risk Category", risk_label)
-
-else:  # batch mode
-    results = raw_df.copy()
-    results["Prediction"]  = np.where(preds == 1, "Yes", "No")
-    results["Probability"] = (probs * 100).round(1).astype(str) + " %"
-    results["Risk"]        = pd.cut(probs, [0, .3, .6, 1], labels=["Low", "Moderate", "High"])
-    st.subheader("📑 Batch Predictions")
-    st.dataframe(results)
+    input_df = user_input_features()
+    X_base = pd.concat([input_df, schema]).drop_duplicates(keep="first")
+    X_all = pd.get_dummies(X_base).reindex(columns=schema.columns, fill_value=0)
+    X_selected = X_all.iloc[[0]]
+    pred = model.predict(X_selected)[0]
+    prob = model.predict_proba(X_selected)[0, 1]
 
 # ──────────────────────────────────────────────────────────────
-# 7.  ROW SELECTOR FOR SHAP INSPECTION
+# 5.  METRIC CARDS
+# ──────────────────────────────────────────────────────────────
+st.subheader("Prediction")
+
+risk = "🟢 Low" if prob < 0.3 else "🟡 Moderate" if prob < 0.6 else "🔴 High"
+col1, col2, col3 = st.columns(3)
+col1.metric("Prediction", "Yes" if pred else "No")
+col2.metric("Probability", f"{prob:.1%}")
+col3.metric("Risk Category", risk)
+
+# ──────────────────────────────────────────────────────────────
+# 6.  SHAP EXPLANATIONS
 # ──────────────────────────────────────────────────────────────
 st.subheader("🔍 SHAP Explanations")
 
-row_idx = 0
-if len(raw_df) > 1:
-    row_idx = st.number_input("Select employee row to inspect:",
-                              min_value=0, max_value=len(raw_df) - 1, step=1, value=0)
-X_row       = X_pred.iloc[[row_idx]]
-shap_values = explainer.shap_values(X_row)
-if not isinstance(shap_values, np.ndarray):  # list for binary
-    shap_values = shap_values[1]
+shap_vals = explainer.shap_values(X_selected)
+shap_vals = shap_vals if isinstance(shap_vals, np.ndarray) else shap_vals[1]
 
-# ───── 7-A Beeswarm
 st.markdown("### 🌐 Global Impact — Beeswarm")
-fig_bee, _ = plt.subplots()
-shap.summary_plot(shap_values, X_row, show=False)
-st.pyplot(fig_bee)
+fig1, ax1 = plt.subplots()
+shap.summary_plot(shap_vals, X_selected, show=False)
+st.pyplot(fig1)
 plt.clf()
 
-# ───── 7-B Decision plot
 st.markdown("### 🧭 Decision Path (Individual)")
-fig_dec, _ = plt.subplots()
-shap.decision_plot(explainer.expected_value, shap_values[0], X_row, show=False)
-st.pyplot(fig_dec)
+fig2, ax2 = plt.subplots()
+shap.decision_plot(explainer.expected_value, shap_vals[0], X_selected, show=False)
+st.pyplot(fig2)
 plt.clf()
 
-# ───── 7-C Force plot
 st.markdown("### 🎯 Local Force Plot")
-fig_force = shap.plots.force(
-    explainer.expected_value, shap_values[0], X_row.iloc[0],
-    matplotlib=True, show=False
-)
-st.pyplot(fig_force)
-
-# ──────────────────────────────────────────────────────────────
-# 8.  FEATURE 5 – INTERACTIVE FEATURE IMPACT VIEWER
-# ──────────────────────────────────────────────────────────────
-st.markdown("## 🔬 Interactive Feature Impact Viewer")
-
-# Rank features by |SHAP|
-abs_shap = np.abs(shap_values[0])
-sorted_idx = np.argsort(abs_shap)[::-1]
-sorted_features = [X_row.columns[i] for i in sorted_idx]
-
-selected_feature = st.selectbox(
-    "Choose a feature to view its SHAP contribution:",
-    sorted_features
-)
-
-feat_idx = list(X_row.columns).index(selected_feature)
-feat_value = X_row.iloc[0, feat_idx]
-feat_shap  = shap_values[0][feat_idx]
-
-# Simple bar plot: single feature contribution
-fig_feat, ax_feat = plt.subplots(figsize=(4, 1.2))
-color = "red" if feat_shap > 0 else "blue"
-ax_feat.barh([selected_feature], [feat_shap], color=color)
-ax_feat.set_xlabel("SHAP value (impact on log-odds)")
-ax_feat.set_xlim(min(0, feat_shap) * 1.2, max(0, feat_shap) * 1.2)
-ax_feat.axvline(0, color="k", linewidth=.8)
-ax_feat.set_yticklabels([f"{selected_feature} = {feat_value}"])
-st.pyplot(fig_feat)
-plt.clf()
-
+fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_selected.iloc[0], matplotlib=True, show=False)
+st.pyplot(fig3)
 st.caption("▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
 
 # ──────────────────────────────────────────────────────────────
-# 9.  PSYCHOLOGY-POWERED HR RECOMMENDATIONS
+# 7.  PSYCHOLOGY-BASED HR RECOMMENDATIONS
 # ──────────────────────────────────────────────────────────────
-st.subheader("🧠 HR Recommendations Based on Psychology")
+st.subheader("🧠 Psychology-Based HR Recommendations")
 
-rec_msgs = []
+tips = []
+rec = {
+    "JobSatisfaction": {
+        1: "Very low job satisfaction. Consider role changes or engagement programs.",
+        2: "Moderate dissatisfaction — explore internal mobility or mentoring.",
+        3: "Generally satisfied. Sustain engagement.",
+        4: "Highly satisfied — continue current support."
+    },
+    "EnvironmentSatisfaction": {
+        1: "Poor environment rating. Check ergonomics or team climate.",
+        2: "Mediocre satisfaction — ask for feedback.",
+        3: "Supportive environment likely.",
+        4: "Excellent satisfaction with work setting."
+    },
+    "RelationshipSatisfaction": {
+        1: "Poor peer relations — offer team-building or communication training.",
+        2: "May benefit from interpersonal coaching.",
+        3: "Workplace climate appears fair.",
+        4: "Strong relationships — a retention strength."
+    },
+    "JobInvolvement": {
+        1: "Low involvement. Try goal setting or recognition.",
+        2: "Could improve with motivation or autonomy.",
+        3: "Engaged employee.",
+        4: "Highly involved — sustain momentum."
+    },
+    "WorkLifeBalance": {
+        1: "Work-life conflict. Consider flexible work policies.",
+        2: "At risk of imbalance — check workloads.",
+        3: "Balance is healthy.",
+        4: "Excellent balance — reinforce this culture."
+    },
+    "OverTime_Yes": "Regular overtime flagged. Watch for burnout or overload."
+}
 
-# 1. Satisfaction-related
-jsat = input_df.get("JobSatisfaction", [None])[0]
-if jsat in psych_recommendations["JobSatisfaction"]:
-    rec_msgs.append(psych_recommendations["JobSatisfaction"][jsat])
+for f in ["JobSatisfaction", "EnvironmentSatisfaction", "RelationshipSatisfaction", "JobInvolvement", "WorkLifeBalance"]:
+    score = input_df.get(f, [None])[0]
+    if score in rec[f]:
+        tips.append(rec[f][score])
 
-envsat = input_df.get("EnvironmentSatisfaction", [None])[0]
-if envsat in psych_recommendations["EnvironmentSatisfaction"]:
-    rec_msgs.append(psych_recommendations["EnvironmentSatisfaction"][envsat])
+if "OverTime_Yes" in X_selected.columns and X_selected["OverTime_Yes"].iloc[0] == 1:
+    tips.append(rec["OverTime_Yes"])
 
-relsat = input_df.get("RelationshipSatisfaction", [None])[0]
-if relsat in psych_recommendations["RelationshipSatisfaction"]:
-    rec_msgs.append(psych_recommendations["RelationshipSatisfaction"][relsat])
-
-# 2. Engagement & balance
-involvement = input_df.get("JobInvolvement", [None])[0]
-if involvement in psych_recommendations["JobInvolvement"]:
-    rec_msgs.append(psych_recommendations["JobInvolvement"][involvement])
-
-wlb = input_df.get("WorkLifeBalance", [None])[0]
-if wlb in psych_recommendations["WorkLifeBalance"]:
-    rec_msgs.append(psych_recommendations["WorkLifeBalance"][wlb])
-
-# 3. Overtime
-if "OverTime_Yes" in X_user.columns and X_user["OverTime_Yes"].iloc[0] == 1:
-    rec_msgs.append(psych_recommendations["OverTime_Yes"])
-
-# Show collected recommendations
-if rec_msgs:
-    for rec in rec_msgs:
-        st.info(rec)
+if tips:
+    for msg in tips:
+        st.info(msg)
 else:
-    st.success("No major psychological concerns detected. Keep supporting this employee proactively!")
+    st.success("No major psychological flags. Maintain support and communication.")
