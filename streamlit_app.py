@@ -84,9 +84,11 @@ def sidebar_inputs() -> pd.DataFrame:
         base  = col.split("_")[0]
         tip   = tooltips.get(base, "")
         key   = f"inp_{col}"
+
         if schema[col].dtype == "object":
             options = list(schema[col].unique())
-            data[col] = st.sidebar.selectbox(col, options, key=key, help=tip)
+            default = st.session_state.get(key, options[0])
+            data[col] = st.sidebar.selectbox(col, options, key=key, index=options.index(default), help=tip)
         else:
             if col in X_stats:
                 cmin  = float(X_stats[col]["min"])
@@ -94,7 +96,9 @@ def sidebar_inputs() -> pd.DataFrame:
                 cmean = float(X_stats[col]["mean"])
             else:
                 cmin, cmax, cmean = 0.0, 1.0, 0.5
-            data[col] = st.sidebar.slider(col, cmin, cmax, cmean, key=key, help=tip)
+            default = st.session_state.get(key, cmean)
+            data[col] = st.sidebar.slider(col, cmin, cmax, default, key=key, help=tip)
+
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
