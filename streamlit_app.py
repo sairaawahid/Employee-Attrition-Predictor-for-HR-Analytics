@@ -153,7 +153,7 @@ X_enc  = pd.get_dummies(X_full).iloc[:len(raw_df)]
 X_enc  = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 
 # ═══════════════════════════════════════
-# 9.  Batch scoring (if any)
+# 9.  Batch prediction (if any)
 # ═══════════════════════════════════════
 if batch_mode:
     preds  = model.predict(X_enc)
@@ -202,6 +202,21 @@ st.markdown("### 🧭 Decision Path")
 fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
+
+st.markdown("### 🎯 Local Force Plot")
+
+st_shap = st.empty()
+
+# Only render force plot if notebook-compatible visualizer is available
+try:
+    shap_html = shap.plots.force(
+        explainer.expected_value, sv[0], X_user.iloc[0], matplotlib=False, show=False
+    )
+    from streamlit.components.v1 import html
+    html(shap.getjs(), height=0)  # inject SHAP JS only once
+    html(shap_html, height=300)
+except Exception as e:
+    st.warning("⚠️ Force plot not supported in this environment.")
 
 st.markdown("### 🔎 Interactive Feature Impact")
 feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
