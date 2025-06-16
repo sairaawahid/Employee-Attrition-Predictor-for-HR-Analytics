@@ -218,11 +218,31 @@ pred = model.predict(X_user)[0]
 prob = model.predict_proba(X_user)[0, 1]
 risk = label_risk(prob)
 
-st.subheader("🎯 Prediction")
-c1, c2, c3 = st.columns(3)
-c1.metric("Prediction",   "Yes" if pred else "No")
-c2.metric("Probability",  f"{prob:.1%}")
-c3.metric("Risk Category", risk)
+st.markdown("### 🎯 Prediction")
+st.info("This section shows whether the employee is likely to leave the company (Yes/No), "
+        "the exact probability of attrition, and a categorized risk level: "
+        "**Low (<30%)**, **Moderate (30–60%)**, or **High (>60%)**.")
+
+# Styled box container
+st.markdown("""
+<div style='border: 2px solid #eee; border-radius: 10px; padding: 20px; background-color: #f9f9f9;'>
+    <div style='display: flex; justify-content: space-between; font-size: 18px;'>
+        <div>
+            <strong>Prediction</strong><br>
+            <span style='font-size: 24px; color: #444;'>{}</span>
+        </div>
+        <div>
+            <strong>Probability</strong><br>
+            <span style='font-size: 24px; color: #444;'>{:.1%}</span>
+        </div>
+        <div>
+            <strong>Risk Category</strong><br>
+            <span style='font-size: 24px;'>{}</span>
+        </div>
+    </div>
+</div>
+""".format("Yes" if pred else "No", prob, risk),
+unsafe_allow_html=True)
 
 # ═══════════════════════════════════════
 # 11.  SHAP explanations
