@@ -1,0 +1,132 @@
+{
+    "Age": {
+        "min": 18.0,
+        "max": 60.0,
+        "mean": 36.923809523809524
+    },
+    "DailyRate": {
+        "min": 102.0,
+        "max": 1499.0,
+        "mean": 802.4857142857143
+    },
+    "DistanceFromHome": {
+        "min": 1.0,
+        "max": 29.0,
+        "mean": 9.19251700680272
+    },
+    "Education": {
+        "min": 1.0,
+        "max": 5.0,
+        "mean": 2.912925170068027
+    },
+    "EmployeeCount": {
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0
+    },
+    "EmployeeNumber": {
+        "min": 1.0,
+        "max": 2068.0,
+        "mean": 1024.865306122449
+    },
+    "EnvironmentSatisfaction": {
+        "min": 1.0,
+        "max": 4.0,
+        "mean": 2.721768707482993
+    },
+    "HourlyRate": {
+        "min": 30.0,
+        "max": 100.0,
+        "mean": 65.89115646258503
+    },
+    "JobInvolvement": {
+        "min": 1.0,
+        "max": 4.0,
+        "mean": 2.7299319727891156
+    },
+    "JobLevel": {
+        "min": 1.0,
+        "max": 5.0,
+        "mean": 2.0639455782312925
+    },
+    "JobSatisfaction": {
+        "min": 1.0,
+        "max": 4.0,
+        "mean": 2.7285714285714286
+    },
+    "MonthlyIncome": {
+        "min": 1009.0,
+        "max": 19999.0,
+        "mean": 6502.931292517007
+    },
+    "MonthlyRate": {
+        "min": 2094.0,
+        "max": 26999.0,
+        "mean": 14313.103401360544
+    },
+    "NumCompaniesWorked": {
+        "min": 0.0,
+        "max": 9.0,
+        "mean": 2.6931972789115646
+    },
+    "PercentSalaryHike": {
+        "min": 11.0,
+        "max": 25.0,
+        "mean": 15.209523809523809
+    },
+    "PerformanceRating": {
+        "min": 3.0,
+        "max": 4.0,
+        "mean": 3.1537414965986397
+    },
+    "RelationshipSatisfaction": {
+        "min": 1.0,
+        "max": 4.0,
+        "mean": 2.7122448979591836
+    },
+    "StandardHours": {
+        "min": 80.0,
+        "max": 80.0,
+        "mean": 80.0
+    },
+    "StockOptionLevel": {
+        "min": 0.0,
+        "max": 3.0,
+        "mean": 0.7938775510204081
+    },
+    "TotalWorkingYears": {
+        "min": 0.0,
+        "max": 40.0,
+        "mean": 11.279591836734694
+    },
+    "TrainingTimesLastYear": {
+        "min": 0.0,
+        "max": 6.0,
+        "mean": 2.7993197278911564
+    },
+    "WorkLifeBalance": {
+        "min": 1.0,
+        "max": 4.0,
+        "mean": 2.7612244897959184
+    },
+    "YearsAtCompany": {
+        "min": 0.0,
+        "max": 40.0,
+        "mean": 7.0081632653061225
+    },
+    "YearsInCurrentRole": {
+        "min": 0.0,
+        "max": 18.0,
+        "mean": 4.229251700680272
+    },
+    "YearsSinceLastPromotion": {
+        "min": 0.0,
+        "max": 15.0,
+        "mean": 2.1877551020408164
+    },
+    "YearsWithCurrManager": {
+        "min": 0.0,
+        "max": 17.0,
+        "mean": 4.12312925170068
+    }
+}
