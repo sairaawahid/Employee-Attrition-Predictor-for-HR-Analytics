@@ -12,7 +12,7 @@
             "Yes"
         ]
     },
-    "BusinessTravel": {
+    "Business Travel": {
         "dtype": "object",
         "options": [
             "Non-Travel",
@@ -20,7 +20,7 @@
             "Travel_Rarely"
         ]
     },
-    "DailyRate": {
+    "Daily Rate": {
         "dtype": "int64",
         "min": 102.0,
         "max": 1499.0,
@@ -34,7 +34,7 @@
             "Sales"
         ]
     },
-    "DistanceFromHome": {
+    "Distance From Home": {
         "dtype": "int64",
         "min": 1.0,
         "max": 29.0,
@@ -46,7 +46,7 @@
         "max": 5.0,
         "mean": 2.912925170068027
     },
-    "EducationField": {
+    "Education Field": {
         "dtype": "object",
         "options": [
             "Human Resources",
@@ -57,19 +57,7 @@
             "Technical Degree"
         ]
     },
-    "EmployeeCount": {
-        "dtype": "int64",
-        "min": 1.0,
-        "max": 1.0,
-        "mean": 1.0
-    },
-    "EmployeeNumber": {
-        "dtype": "int64",
-        "min": 1.0,
-        "max": 2068.0,
-        "mean": 1024.865306122449
-    },
-    "EnvironmentSatisfaction": {
+    "Environment Satisfaction": {
         "dtype": "int64",
         "min": 1.0,
         "max": 4.0,
@@ -82,25 +70,25 @@
             "Male"
         ]
     },
-    "HourlyRate": {
+    "Hourly Rate": {
         "dtype": "int64",
         "min": 30.0,
         "max": 100.0,
         "mean": 65.89115646258503
     },
-    "JobInvolvement": {
+    "Job Involvement": {
         "dtype": "int64",
         "min": 1.0,
         "max": 4.0,
         "mean": 2.7299319727891156
     },
-    "JobLevel": {
+    "Job Level": {
         "dtype": "int64",
         "min": 1.0,
         "max": 5.0,
         "mean": 2.0639455782312925
     },
-    "JobRole": {
+    "Job Role": {
         "dtype": "object",
         "options": [
             "Healthcare Representative",
@@ -114,13 +102,13 @@
             "Sales Representative"
         ]
     },
-    "JobSatisfaction": {
+    "Job Satisfaction": {
         "dtype": "int64",
         "min": 1.0,
         "max": 4.0,
         "mean": 2.7285714285714286
     },
-    "MaritalStatus": {
+    "Marital Status": {
         "dtype": "object",
         "options": [
             "Divorced",
@@ -128,104 +116,92 @@
             "Single"
         ]
     },
-    "MonthlyIncome": {
+    "Monthly Income": {
         "dtype": "int64",
         "min": 1009.0,
         "max": 19999.0,
         "mean": 6502.931292517007
     },
-    "MonthlyRate": {
+    "Monthly Rate": {
         "dtype": "int64",
         "min": 2094.0,
         "max": 26999.0,
         "mean": 14313.103401360544
     },
-    "NumCompaniesWorked": {
+    "No. of Companies Worked": {
         "dtype": "int64",
         "min": 0.0,
         "max": 9.0,
         "mean": 2.6931972789115646
     },
-    "Over18": {
-        "dtype": "object",
-        "options": [
-            "Y"
-        ]
-    },
-    "OverTime": {
+    "Over Time": {
         "dtype": "object",
         "options": [
             "No",
             "Yes"
         ]
     },
-    "PercentSalaryHike": {
+    "Percent Salary Hike": {
         "dtype": "int64",
         "min": 11.0,
         "max": 25.0,
         "mean": 15.209523809523809
     },
-    "PerformanceRating": {
+    "Performance Rating": {
         "dtype": "int64",
         "min": 1.0,
         "max": 4.0,
         "mean": 3.1537414965986397
     },
-    "RelationshipSatisfaction": {
+    "Relationship Satisfaction": {
         "dtype": "int64",
         "min": 1.0,
         "max": 4.0,
         "mean": 2.7122448979591836
     },
-    "StandardHours": {
-        "dtype": "int64",
-        "min": 10.0,
-        "max": 80.0,
-        "mean": 80.0
-    },
-    "StockOptionLevel": {
+    "Stock Option Level": {
         "dtype": "int64",
         "min": 0.0,
         "max": 3.0,
         "mean": 0.7938775510204081
     },
-    "TotalWorkingYears": {
+    "Total Working Years": {
         "dtype": "int64",
         "min": 0.0,
         "max": 40.0,
         "mean": 11.279591836734694
     },
-    "TrainingTimesLastYear": {
+    "Training Times Last Year": {
         "dtype": "int64",
         "min": 0.0,
-        "max": 6.0,
+        "max": 10.0,
         "mean": 2.7993197278911564
     },
-    "WorkLifeBalance": {
+    "Work Life Balance": {
         "dtype": "int64",
         "min": 1.0,
         "max": 4.0,
         "mean": 2.7612244897959184
     },
-    "YearsAtCompany": {
+    "Years At Company": {
         "dtype": "int64",
         "min": 0.0,
         "max": 40.0,
         "mean": 7.0081632653061225
     },
-    "YearsInCurrentRole": {
+    "Years In Current Role": {
         "dtype": "int64",
         "min": 0.0,
         "max": 18.0,
         "mean": 4.229251700680272
     },
-    "YearsSinceLastPromotion": {
+    "Years Since Last Promotion": {
         "dtype": "int64",
         "min": 0.0,
         "max": 15.0,
         "mean": 2.1877551020408164
     },
-    "YearsWithCurrManager": {
+    "Years With Current Manager": {
         "dtype": "int64",
         "min": 0.0,
         "max": 17.0,
