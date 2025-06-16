@@ -202,6 +202,12 @@ if batch_mode:
     raw_df["Risk Category"] = [label_risk(p) for p in probs]
 
     st.subheader("📑 Batch Prediction Summary")
+    st.info("This table summarizes attrition predictions for all uploaded employees. "
+        "Each row shows whether the employee is predicted to leave (Yes/No), "
+        "the exact probability, and the assigned risk category: "
+        "**Low (<30%)**, **Moderate (30–60%)**, or **High (>60%)**. "
+        "You can select a row for detailed SHAP analysis.")
+    
     sel_row = st.number_input("Row to inspect (1-based)",
                               min_value=1, max_value=len(raw_df), value=1)
     st.dataframe(raw_df)
