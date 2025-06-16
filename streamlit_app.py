@@ -61,13 +61,18 @@ def safe_stats(col):
 st.title("Employee Attrition Predictor")
 st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
 
-with st.expander("📘 How to use this app"):
-    st.markdown("""
-    • **Sidebar** to enter attributes (or **Use Sample Data** / **Reset Form**).  
-    • Upload a CSV for **batch scoring**.  
-    • Select any row for detailed SHAP inspection.  
-    • View global & local SHAP plots and download prediction history.
-    """)
+with st.expander("📘 How to use this app", expanded=False):
+    st.markdown(
+        """
+1. **Enter employee details** in the sidebar.
+2. **Use Sample Data** for a demo or **Reset Form** to start fresh.
+3. **Upload a CSV (optional)** for bulk scoring and row-by-row inspection.  
+4. Click **Prediction** to see risk, probability & calibrated risk category.  
+5. Explore **SHAP plots** to understand which factors drive each prediction.  
+6. Use the **Interactive Feature Impact** to inspect any feature.  
+7. **Download or clear History** to track past predictions and share insights.
+        """
+    )
 
 uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
 
@@ -106,11 +111,37 @@ def sidebar_inputs():
 # 6.  Sample & Reset buttons
 # ═══════════════════════════════════════
 sample_employee = {
-    "Age": 35,
-    "Gender": "Male",
+    "Age": 32,
+    "Attrition": "No",
+    "Business Travel": "Travel_Rarely",
+    "Daily Rate": 1100,
     "Department": "Research & Development",
-    "BusinessTravel": "Travel_Rarely",
-    "MonthlyIncome": 5500,
+    "Distance From Home": 8,
+    "Education": 3,
+    "Education Field": "Life Sciences",
+    "Environment Satisfaction": 3,
+    "Gender": "Male",
+    "Hourly Rate": 65,
+    "Job Involvement": 3,
+    "Job Level": 2,
+    "Job Role": "Research Scientist",
+    "Job Satisfaction": 2,
+    "Marital Status": "Single",
+    "Monthly Income": 5200,
+    "Monthly Rate": 14000,
+    "No. of Companies Worked": 2,
+    "Over Time": "Yes",
+    "Percent Salary Hike": 13,
+    "Performance Rating": 3,
+    "Relationship Satisfaction": 2,
+    "Stock Option Level": 1,
+    "Total Working Years": 10,
+    "Training Times Last Year": 3,
+    "Work Life Balance": 2,
+    "Years At Company": 5,
+    "Years In Current Role": 3,
+    "Years Since Last Promotion": 1,
+    "Years With Current Manager": 2,
 }
 
 def load_sample():
@@ -189,21 +220,32 @@ c3.metric("Risk Category", risk)
 # 11.  SHAP explanations
 # ═══════════════════════════════════════
 st.subheader("🔍 SHAP Explanations")
+st.info("These plots show **which features push the prediction higher or lower.** "
+        "Positive values increase attrition risk; negative values decrease it.")
 sv = explainer.shap_values(X_user)
 if isinstance(sv, list):
     sv = sv[1]
 
 st.markdown("### 🌐 Global Impact — Beeswarm")
+st.info("This plot shows which features **had the highest overall impact** "
+        "on the model’s prediction for this employee. Longer bars = stronger effect. "
+        "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
 fig_bsw, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_bsw); plt.clf()
 
 st.markdown("### 🧭 Decision Path")
+st.info("This plot explains the **sequence of contributions** each feature made, "
+        "starting from the model’s baseline prediction. Features that increased or "
+        "decreased the risk are shown from left to right, helping you follow the model’s logic.")
 fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
 
 st.markdown("### 🎯 Local Force Plot")
+st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
+        "higher (red) vs. lower (blue). It gives an intuitive sense of what tipped the balance "
+        "towards a high or low attrition risk for this specific case.")
 try:
     fig_f = shap.plots.force(explainer.expected_value, sv[0], X_user.iloc[0],
                              matplotlib=True, show=False)
@@ -219,6 +261,9 @@ except Exception:
     # st.warning("⚠️ Force plot not supported in this environment.")
 
 st.markdown("### 🔎 Interactive Feature Impact")
+st.info("Select a feature to see **how much it individually influenced** the prediction. "
+        "This bar shows whether the chosen feature increased or decreased attrition risk "
+        "and by how much in the context of this specific employee.")
 feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
 idx     = X_user.columns.get_loc(feature)
 single_val_arr = np.array([sv[0][idx]])
