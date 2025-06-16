@@ -127,7 +127,7 @@ sample_employee = {
     "Job Role": "Research Scientist",
     "Job Satisfaction": 2,
     "Marital Status": "Single",
-    "Monthly Income": 5200,
+    "Monthly Income": 5200,          # ← space kept
     "Monthly Rate": 14000,
     "No. of Companies Worked": 2,
     "Over Time": "Yes",
@@ -145,11 +145,19 @@ sample_employee = {
 }
 
 def load_sample():
+    """Push sample values into sidebar widgets, clamping numerics where needed."""
     for col, val in sample_employee.items():
-        if isinstance(val, (int, float)) and schema_meta[col]["dtype"] != "object":
+        # skip if the column isn't in the schema (prevents KeyError)
+        if col not in schema_meta:
+            continue
+
+        # Clamp numeric values to slider range
+        if schema_meta[col]["dtype"] != "object" and isinstance(val, (int, float)):
             cmin, cmax, _ = safe_stats(col)
             val = max(min(val, cmax), cmin)
+
         st.session_state[f"inp_{col}"] = val
+
 
 def reset_form():
     for col, meta in schema_meta.items():
@@ -226,6 +234,7 @@ sv = explainer.shap_values(X_user)
 if isinstance(sv, list):
     sv = sv[1]
 
+
 st.markdown("### 🌐 Global Impact — Beeswarm")
 st.info("This plot shows which features **had the highest overall impact** "
         "on the model’s prediction for this employee. Longer bars = stronger effect. "
@@ -234,6 +243,7 @@ fig_bsw, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_bsw); plt.clf()
 
+
 st.markdown("### 🧭 Decision Path")
 st.info("This plot explains the **sequence of contributions** each feature made, "
         "starting from the model’s baseline prediction. Features that increased or "
@@ -241,6 +251,7 @@ st.info("This plot explains the **sequence of contributions** each feature made,
 fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
+
 
 st.markdown("### 🎯 Local Force Plot")
 st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
@@ -259,6 +270,7 @@ except Exception:
         max_display=15, show=False)
     st.pyplot(fig_f)
     # st.warning("⚠️ Force plot not supported in this environment.")
+
 
 st.markdown("### 🔎 Interactive Feature Impact")
 st.info("Select a feature to see **how much it individually influenced** the prediction. "
