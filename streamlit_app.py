@@ -97,7 +97,7 @@ def sidebar_inputs():
                                             key=key, help=tip)
         else:
             cmin, cmax, cmean = safe_stats(col)
-            curval = float(st.session_state.get(key, cmean))
+            curval = float(st.session_state.get(key, cmin))
             curval = min(max(curval, cmin), cmax)   # clamp
             if abs(cmax - cmin) < 1e-9:
                 row[col] = st.sidebar.number_input(col, value=curval,
@@ -165,7 +165,7 @@ def reset_form():
         if meta["dtype"] == "object":
             st.session_state[key] = meta.get("options", ["Unknown"])[0]
         else:
-            st.session_state[key] = safe_stats(col)[2]
+            st.session_state[key] = safe_stats(col)[0]
 
 st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
 st.sidebar.button("🔄 Reset Form", on_click=reset_form)
