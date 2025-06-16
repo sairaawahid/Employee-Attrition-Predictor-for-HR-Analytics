@@ -1,7 +1,10 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib, shap, matplotlib.pyplot as plt, json
+import joblib
+import shap
+import matplotlib.pyplot as plt
+import json
 from pathlib import Path
 from datetime import datetime
 
@@ -127,7 +130,7 @@ sample_employee = {
     "Job Role": "Research Scientist",
     "Job Satisfaction": 2,
     "Marital Status": "Single",
-    "Monthly Income": 5200,          # ← space kept
+    "Monthly Income": 5200,
     "Monthly Rate": 14000,
     "No. of Companies Worked": 2,
     "Over Time": "Yes",
