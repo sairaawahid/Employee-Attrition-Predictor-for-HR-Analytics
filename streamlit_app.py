@@ -16,9 +16,8 @@ def load_model():
     return joblib.load("xgboost_optimized_model.pkl")
 
 @st.cache_data
-def load_schema_json():
-    """Load the corrected employee_schema.json (dtype + options)."""
-    return json.loads(Path("employee_schema.json").read_text())
+def load_schema():
+    return pd.read_json("employee_schema.json")
 
 @st.cache_data
 def load_stats():
@@ -35,25 +34,28 @@ def get_explainer(_model):
 # ──────────────────────────────────────────────────────────────
 # 2.  INITIALIZE
 # ──────────────────────────────────────────────────────────────
-model       = load_model()
-schema_meta = load_schema_json()      # dict: {col: {"dtype": "...", ...}}
-X_stats     = load_stats()
-tooltips    = load_tooltips()
-explainer   = get_explainer(model)
+model      = load_model()
+schema     = load_schema()
+X_stats    = load_stats()
+tooltips   = load_tooltips()
+explainer  = get_explainer(model)
 
 if "history" not in st.session_state:
     st.session_state["history"] = pd.DataFrame()
 
 # ──────────────────────────────────────────────────────────────
-# 3.  RISK CATEGORY HELPER
+# 3.  RISK CATEGORY
 # ──────────────────────────────────────────────────────────────
 def label_risk(p):
-    if p < 0.30:   return "🟢 Low"
-    if p < 0.60:   return "🟡 Moderate"
-    return "🔴 High"
+    if p < 0.30:
+        return "🟢 Low"
+    elif p < 0.60:
+        return "🟡 Moderate"
+    else:
+        return "🔴 High"
 
 # ──────────────────────────────────────────────────────────────
-# 4.  PAGE HEADER / CSV UPLOAD
+# 4.  HEADER / GUIDE / CSV UPLOAD
 # ──────────────────────────────────────────────────────────────
 st.title("Employee Attrition Predictor")
 st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
@@ -62,51 +64,41 @@ with st.expander("📘 How to use this app"):
     st.markdown(
         """
         1. **Enter employee details** in the sidebar or **upload a CSV** below.  
-        2. View **prediction, probability, risk category & SHAP explanations**.  
-        3. **Interactive Feature Impact** lets you inspect any feature.  
-        4. Download / clear **prediction history** anytime.  
-        5. Click **Use Sample Data** for a quick demo or **Reset Form** to start fresh.
+        2. See **risk prediction, probability & SHAP explanations**.  
+        3. Use **Interactive Feature Impact** dropdown to inspect any feature.  
+        4. Download or clear **prediction history** at any time.  
+        5. *New:* Click **Use Sample Data** for a quick demo or **Reset Form** to start fresh.
         """
     )
 
 uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
 
 # ──────────────────────────────────────────────────────────────
-# 5.  SIDEBAR WIDGETS
+# 5.  SIDEBAR INPUTS (WITH UNIQUE KEYS)
 # ──────────────────────────────────────────────────────────────
 st.sidebar.header("📋 Employee Attributes")
 
 def sidebar_inputs() -> pd.DataFrame:
     data = {}
-    for col, meta in schema_meta.items():
-        tip = tooltips.get(col.split("_")[0], "")
-        key = f"inp_{col}"
-
-        # Categorical dropdown
-        if meta["dtype"] == "object":
-            options = meta["options"]
-            default = st.session_state.get(key, options[0])
-            if default not in options:
-                default = options[0]
-            data[col] = st.sidebar.selectbox(
-                col, options,
-                index=options.index(default),
-                key=key, help=tip
-            )
-        # Numeric slider
+    for col in schema.columns:
+        base  = col.split("_")[0]
+        tip   = tooltips.get(base, "")
+        key   = f"inp_{col}"
+        if schema[col].dtype == "object":
+            options = list(schema[col].unique())
+            data[col] = st.sidebar.selectbox(col, options, key=key, help=tip)
         else:
-            cmin, cmax = X_stats[col]["min"], X_stats[col]["max"]
-            cmean      = X_stats[col]["mean"]
-            default    = float(st.session_state.get(key, cmean))
-            default    = max(min(default, cmax), cmin)
-            data[col]  = st.sidebar.slider(
-                col, cmin, cmax, default,
-                key=key, help=tip
-            )
+            if col in X_stats:
+                cmin  = float(X_stats[col]["min"])
+                cmax  = float(X_stats[col]["max"])
+                cmean = float(X_stats[col]["mean"])
+            else:
+                cmin, cmax, cmean = 0.0, 1.0, 0.5
+            data[col] = st.sidebar.slider(col, cmin, cmax, cmean, key=key, help=tip)
     return pd.DataFrame(data, index=[0])
 
 # ──────────────────────────────────────────────────────────────
-# 6.  SAMPLE DATA & RESET FORM
+# 6.  SAMPLE + RESET BUTTON LOGIC
 # ──────────────────────────────────────────────────────────────
 sample_employee = {
     "Age": 32,
@@ -142,20 +134,28 @@ sample_employee = {
 }
 
 def load_sample():
+    """Populate sidebar widgets with sample_employee values."""
     for col, val in sample_employee.items():
         key = f"inp_{col}"
+        # Clamp numeric values to slider bounds
         if isinstance(val, (int, float, np.number)) and col in X_stats:
-            cmin, cmax = X_stats[col]["min"], X_stats[col]["max"]
-            val = max(min(val, cmax), cmin)
+            cmin = float(X_stats[col]["min"])
+            cmax = float(X_stats[col]["max"])
+            val  = max(min(val, cmax), cmin)
         st.session_state[key] = val
 
 def reset_form():
-    for col, meta in schema_meta.items():
+    """Return widgets to default slider mean or first selectbox option."""
+    for col in schema.columns:
         key = f"inp_{col}"
-        if meta["dtype"] == "object":
-            st.session_state[key] = meta["options"][0]
+        if schema[col].dtype == "object":
+            default_val = list(schema[col].unique())[0]
         else:
-            st.session_state[key] = X_stats[col]["mean"]
+            if col in X_stats:
+                default_val = float(X_stats[col]["mean"])
+            else:
+                default_val = 0.0
+        st.session_state[key] = default_val
 
 st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
 st.sidebar.button("🔄 Reset Form",     on_click=reset_form)
@@ -163,7 +163,7 @@ st.sidebar.button("🔄 Reset Form",     on_click=reset_form)
 # ──────────────────────────────────────────────────────────────
 # 7.  GET DATAFRAME (sidebar or csv)
 # ──────────────────────────────────────────────────────────────
-if uploaded_file is not None:
+if uploaded_file:
     raw_df = pd.read_csv(uploaded_file)
     batch_mode = True
 else:
@@ -173,20 +173,13 @@ else:
 # ──────────────────────────────────────────────────────────────
 # 8.  PREDICTION PIPELINE
 # ──────────────────────────────────────────────────────────────
-# Build a template row to guarantee all categories appear after get_dummies
-template_row = {
-    col: (meta["options"][0] if meta["dtype"] == "object" else 0)
-    for col, meta in schema_meta.items()
-}
-schema_df = pd.DataFrame([template_row])
-
-X_full = pd.concat([raw_df, schema_df], ignore_index=True)
-X_enc  = pd.get_dummies(X_full).iloc[0:len(raw_df)]   # keep only user rows
+X_full = pd.concat([raw_df, schema]).drop_duplicates(keep="first")
+X_enc  = pd.get_dummies(X_full).reindex(columns=schema.columns, fill_value=0)
 X_user = X_enc.iloc[[0]]
 
-pred      = model.predict(X_user)[0]
-prob      = model.predict_proba(X_user)[0, 1]
-risk_cat  = label_risk(prob)
+pred = model.predict(X_user)[0]
+prob = model.predict_proba(X_user)[0, 1]
+risk_cat = label_risk(prob)
 
 # ──────────────────────────────────────────────────────────────
 # 9.  METRICS
@@ -217,10 +210,8 @@ st.pyplot(fig2); plt.clf()
 
 st.markdown("### 🎯 Local Force Plot")
 try:
-    fig3 = shap.plots.force(
-        explainer.expected_value, shap_vals[0], X_user.iloc[0],
-        matplotlib=True, show=False
-    )
+    fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0],
+                            matplotlib=True, show=False)
     st.pyplot(fig3)
 except Exception:
     st.info("Force plot fallback to waterfall.")
@@ -241,9 +232,9 @@ if batch_mode:
     preds = model.predict(X_enc)
     probs = model.predict_proba(X_enc)[:, 1]
     out = raw_df.copy()
-    out["Prediction"]    = np.where(preds == 1, "Yes", "No")
-    out["Probability"]   = (probs * 100).round(1).astype(str) + " %"
-    out["Risk Category"] = [label_risk(p) for p in probs]
+    out["Prediction"]      = np.where(preds == 1, "Yes", "No")
+    out["Probability"]     = (probs * 100).round(1).astype(str)+" %"
+    out["Risk Category"]   = [label_risk(p) for p in probs]
     st.markdown("### 📑 Batch Prediction Summary")
     st.dataframe(out)
 
@@ -251,19 +242,17 @@ if batch_mode:
 # 12.  HISTORY
 # ──────────────────────────────────────────────────────────────
 append_df = raw_df.iloc[[0]].copy()
-append_df["Prediction"]   = "Yes" if pred else "No"
-append_df["Probability"]  = f"{prob:.1%}"
+append_df["Prediction"]  = "Yes" if pred else "No"
+append_df["Probability"] = f"{prob:.1%}"
 append_df["Risk Category"] = risk_cat
-append_df["Timestamp"]    = datetime.now().strftime("%Y-%m-%d %H:%M")
+append_df["Timestamp"]   = datetime.now().strftime("%Y-%m-%d %H:%M")
 st.session_state["history"] = pd.concat(
-    [st.session_state["history"], append_df], ignore_index=True
-)
+    [st.session_state["history"], append_df], ignore_index=True)
 
 st.subheader("📥 Prediction History")
 st.dataframe(st.session_state["history"])
-csv_hist = st.session_state["history"].to_csv(index=False).encode()
-st.download_button("💾 Download History", csv_hist,
-                   "prediction_history.csv", "text/csv")
+csv = st.session_state["history"].to_csv(index=False).encode()
+st.download_button("💾 Download History", csv, "prediction_history.csv", "text/csv")
 if st.button("🗑️ Clear History"):
     st.session_state["history"] = pd.DataFrame()
     st.rerun()
