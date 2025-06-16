@@ -8,9 +8,9 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-# ──────────────────────────────────────────────────────────────
-# 1.  CACHED LOADERS
-# ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════
+# 1. Load Cached Resources
+# ═══════════════════════════════════════
 @st.cache_resource
 def load_model():
     return joblib.load("xgboost_optimized_model.pkl")
@@ -20,87 +20,102 @@ def load_schema():
     return json.loads(Path("employee_schema.json").read_text())
 
 @st.cache_data
+def load_stats():
+    return json.loads(Path("numeric_stats.json").read_text())
+
+@st.cache_data
 def load_tooltips():
     try:
         return json.loads(Path("feature_tooltips.json").read_text())
-    except Exception:
+    except:
         return {}
 
 @st.cache_resource
 def get_explainer(_model):
     return shap.TreeExplainer(_model)
 
-# ──────────────────────────────────────────────────────────────
-# 2.  INITIALIZE
-# ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════
+# 2. Initialization
+# ═══════════════════════════════════════
 model       = load_model()
 schema_meta = load_schema()
+num_stats   = load_stats()
 tooltips    = load_tooltips()
 explainer   = get_explainer(model)
 
 if "history" not in st.session_state:
     st.session_state["history"] = pd.DataFrame()
 
-# ──────────────────────────────────────────────────────────────
-# 3.  HELPERS
-# ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════
+# 3. Helpers
+# ═══════════════════════════════════════
 def label_risk(p):
-    if p < .30: return "🟢 Low"
-    if p < .60: return "🟡 Moderate"
-    return "🔴 High"
+    if p < 0.30: return "🟢 Low"
+    elif p < 0.60: return "🟡 Moderate"
+    else: return "🔴 High"
 
 def safe_stats(col):
-    m = schema_meta[col]
-    return m.get("min", 0.0), m.get("max", 1.0), m.get("mean", 0.5)
+    if col in num_stats:
+        cmin, cmax = num_stats[col]["min"], num_stats[col]["max"]
+        cmean = num_stats[col]["mean"]
+        if cmin == cmax:
+            return cmin, cmin + 1, cmin
+        return cmin, cmax, cmean
+    return 0.0, 1.0, 0.5
 
-# ──────────────────────────────────────────────────────────────
-# 4.  HEADER & FILE UPLOAD
-# ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════
+# 4. Header
+# ═══════════════════════════════════════
 st.title("Employee Attrition Predictor")
 st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
 
 with st.expander("📘 How to use this app"):
     st.markdown("""
-    1. Use the **sidebar** to input features or click **Use Sample Data** / **Reset Form**.  
-    2. Or upload a **CSV** file for batch predictions.  
-    3. See prediction, risk, SHAP plots, and explanations.  
-    4. Select a row to view feature impacts interactively.
+    - Use the **sidebar** to enter employee attributes.
+    - Or click **Use Sample Data** to prefill fields.
+    - Or click **Reset Form** to clear fields.
+    - Upload CSV for batch predictions.
+    - Review predictions, SHAP plots, and download history.
     """)
 
 uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
 
-# ──────────────────────────────────────────────────────────────
-# 5.  SIDEBAR INPUT FORM
-# ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════
+# 5. Sidebar Inputs
+# ═══════════════════════════════════════
 st.sidebar.header("📋 Employee Attributes")
 
 def sidebar_inputs():
     row = {}
     for col, meta in schema_meta.items():
-        tip = tooltips.get(col.split("_")[0], "")
         key = f"inp_{col}"
+        tip = tooltips.get(col.split("_")[0], "")
 
         if meta["dtype"] == "object":
-            opts = meta.get("options", ["Unknown"])
-            val = st.session_state.get(key, opts[0])
-            val = val if val in opts else opts[0]
-            row[col] = st.sidebar.selectbox(col, opts, index=opts.index(val), key=key, help=tip)
+            options = meta.get("options", ["Unknown"])
+            default = st.session_state.get(key, options[0])
+            if default not in options:
+                default = options[0]
+            row[col] = st.sidebar.selectbox(col, options, index=options.index(default), key=key, help=tip)
         else:
             cmin, cmax, cmean = safe_stats(col)
             val = float(st.session_state.get(key, cmean))
-            val = max(min(val, cmax), cmin)
-            row[col] = st.sidebar.slider(col, cmin, cmax, val, key=key, help=tip)
+            val = min(max(val, cmin), cmax)
+            if cmax - cmin <= 1e-9:
+                row[col] = st.sidebar.number_input(col, value=val, key=key, help=tip)
+            else:
+                row[col] = st.sidebar.slider(col, cmin, cmax, val, key=key, help=tip)
     return pd.DataFrame([row])
 
-# ──────────────────────────────────────────────────────────────
-# 6.  SAMPLE + RESET BUTTONS
-# ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════
+# 6. Sample & Reset Buttons
+# ═══════════════════════════════════════
 sample_employee = {
-    "Age": 32,
+    "Age": 35,
     "Gender": "Male",
     "Department": "Research & Development",
     "BusinessTravel": "Travel_Rarely",
-    "MonthlyIncome": 5200
+    "MonthlyIncome": 5500,
 }
 
 def load_sample():
@@ -111,16 +126,16 @@ def reset_form():
     for col, meta in schema_meta.items():
         key = f"inp_{col}"
         if meta["dtype"] == "object":
-            st.session_state[key] = meta["options"][0]
+            st.session_state[key] = meta.get("options", ["Unknown"])[0]
         else:
-            st.session_state[key] = meta["mean"]
+            st.session_state[key] = safe_stats(col)[2]
 
 st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
-st.sidebar.button("🔄 Reset Form",     on_click=reset_form)
+st.sidebar.button("🔄 Reset Form", on_click=reset_form)
 
-# ──────────────────────────────────────────────────────────────
-# 7.  COLLECT INPUT
-# ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════
+# 7. Load Data (User or Batch)
+# ═══════════════════════════════════════
 if uploaded_file:
     raw_df = pd.read_csv(uploaded_file)
     batch_mode = True
@@ -128,105 +143,77 @@ else:
     raw_df = sidebar_inputs()
     batch_mode = False
 
-# ──────────────────────────────────────────────────────────────
-# 8.  ONE-HOT ENCODE + ALIGN
-# ──────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════
+# 8. Preprocess & Predict
+# ═══════════════════════════════════════
 template = {col: (meta["options"][0] if meta["dtype"] == "object" else 0)
             for col, meta in schema_meta.items()}
-base_df = pd.DataFrame([template])
+X_schema = pd.DataFrame([template])
 
-X_full = pd.concat([raw_df, base_df], ignore_index=True)
+X_full = pd.concat([raw_df, X_schema], ignore_index=True)
 X_enc = pd.get_dummies(X_full).iloc[:len(raw_df)]
+X_enc = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 
-# ──────────────────────────────────────────────────────────────
-# 9.  ROW SELECTION FOR BATCH
-# ──────────────────────────────────────────────────────────────
-selected_row = 0
 if batch_mode:
-    selected_row = st.selectbox("🔍 Select Row to Inspect", range(len(raw_df)), format_func=lambda x: f"Row {x+1}")
-X_user = X_enc.iloc[[selected_row]]
+    preds = model.predict(X_enc)
+    probs = model.predict_proba(X_enc)[:, 1]
+    raw_df["Prediction"] = np.where(preds == 1, "Yes", "No")
+    raw_df["Probability"] = (probs * 100).round(1).astype(str) + " %"
+    raw_df["Risk Category"] = [label_risk(p) for p in probs]
 
-# ──────────────────────────────────────────────────────────────
-# 10.  PREDICT + METRICS
-# ──────────────────────────────────────────────────────────────
+    st.subheader("📑 Batch Prediction Summary")
+    row_sel = st.selectbox("Select row to inspect", range(len(raw_df)), format_func=lambda x: f"Row {x+1}")
+    st.dataframe(raw_df)
+    X_user = X_enc.iloc[[row_sel]]
+    user_row = raw_df.iloc[[row_sel]]
+else:
+    X_user = X_enc.iloc[[0]]
+    user_row = raw_df.iloc[[0]]
+
+# ═══════════════════════════════════════
+# 9. Single Prediction
+# ═══════════════════════════════════════
 pred = model.predict(X_user)[0]
 prob = model.predict_proba(X_user)[0, 1]
 risk = label_risk(prob)
 
-st.subheader("Prediction")
+st.subheader("🎯 Prediction")
 c1, c2, c3 = st.columns(3)
 c1.metric("Prediction", "Yes" if pred else "No")
 c2.metric("Probability", f"{prob:.1%}")
 c3.metric("Risk Category", risk)
 
-# ──────────────────────────────────────────────────────────────
-# 11.  SHAP PLOTS
-# ──────────────────────────────────────────────────────────────
-shap_vals = explainer.shap_values(X_user)
-if isinstance(shap_vals, list):
-    shap_vals = shap_vals[1]
-
+# ═══════════════════════════════════════
+# 10. SHAP Explanation
+# ═══════════════════════════════════════
 st.subheader("🔍 SHAP Explanations")
-st.markdown("### 🌐 Global Impact — Beeswarm")
-fig1, _ = plt.subplots()
+shap_vals = explainer.shap_values(X_user)
+if isinstance(shap_vals, list): shap_vals = shap_vals[1]
+
+st.markdown("### 🧬 Global Impact — Beeswarm")
+f1, _ = plt.subplots()
 shap.summary_plot(shap_vals, X_user, show=False)
-st.pyplot(fig1); plt.clf()
+st.pyplot(f1); plt.clf()
 
-st.markdown("### 🧭 Decision Path (Individual)")
-fig2, _ = plt.subplots()
+st.markdown("### 🧭 Decision Path")
+f2, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, shap_vals[0], X_user, show=False)
-st.pyplot(fig2); plt.clf()
+st.pyplot(f2); plt.clf()
 
-st.markdown("### 🎯 Local Force Plot")
-try:
-    fig3 = shap.plots.force(explainer.expected_value, shap_vals[0], X_user.iloc[0],
-                            matplotlib=True, show=False)
-    st.pyplot(fig3)
-except Exception:
-    st.info("Force plot fallback to waterfall.")
-    fig3, _ = plt.subplots()
-    shap.plots.waterfall(
-        shap.Explanation(values=shap_vals[0],
-                         base_values=explainer.expected_value,
-                         data=X_user.iloc[0]),
-        max_display=15, show=False)
-    st.pyplot(fig3)
+st.markdown("### 🔎 Interactive Feature Impact")
+feature = st.selectbox("Choose Feature", X_user.columns)
+f3, _ = plt.subplots()
+shap.bar_plot(shap_vals[0][X_user.columns.get_loc(feature)], feature_names=[feature], show=False)
+st.pyplot(f3); plt.clf()
 
-# ──────────────────────────────────────────────────────────────
-# 12.  INTERACTIVE IMPACT VIEWER
-# ──────────────────────────────────────────────────────────────
-st.subheader("📊 Feature Impact Viewer")
-feat = st.selectbox("Select a feature", X_user.columns)
-bar_df = pd.DataFrame({
-    "Feature": [feat],
-    "SHAP Value": [shap_vals[0][X_user.columns.get_loc(feat)]]
-})
-st.bar_chart(bar_df.set_index("Feature"))
-
-# ──────────────────────────────────────────────────────────────
-# 13.  BATCH SUMMARY TABLE
-# ──────────────────────────────────────────────────────────────
-if batch_mode:
-    preds = model.predict(X_enc)
-    probs = model.predict_proba(X_enc)[:, 1]
-    out = raw_df.copy()
-    out["Prediction"] = np.where(preds == 1, "Yes", "No")
-    out["Probability"] = (probs * 100).round(1).astype(str) + " %"
-    out["Risk Category"] = [label_risk(p) for p in probs]
-    st.subheader("📑 Batch Prediction Summary")
-    st.dataframe(out)
-
-# ──────────────────────────────────────────────────────────────
-# 14.  PREDICTION HISTORY
-# ──────────────────────────────────────────────────────────────
-row = raw_df.iloc[[selected_row]].copy()
-row["Prediction"] = "Yes" if pred else "No"
-row["Probability"] = f"{prob:.1%}"
-row["Risk Category"] = risk
-row["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-st.session_state["history"] = pd.concat(
-    [st.session_state["history"], row], ignore_index=True
-)
+# ═══════════════════════════════════════
+# 11. Prediction History
+# ═══════════════════════════════════════
+user_row["Prediction"] = "Yes" if pred else "No"
+user_row["Probability"] = f"{prob:.1%}"
+user_row["Risk Category"] = risk
+user_row["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+st.session_state["history"] = pd.concat([st.session_state["history"], user_row], ignore_index=True)
 
 st.subheader("📥 Prediction History")
 st.dataframe(st.session_state["history"])
