@@ -204,19 +204,19 @@ shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
 
 st.markdown("### 🎯 Local Force Plot")
-
-st_shap = st.empty()
-
-# Only render force plot if notebook-compatible visualizer is available
 try:
-    shap_html = shap.plots.force(
-        explainer.expected_value, sv[0], X_user.iloc[0], matplotlib=False, show=False
-    )
-    from streamlit.components.v1 import html
-    html(shap.getjs(), height=0)  # inject SHAP JS only once
-    html(shap_html, height=300)
-except Exception as e:
-    st.warning("⚠️ Force plot not supported in this environment.")
+    fig_f = shap.plots.force(explainer.expected_value, sv[0], X_user.iloc[0],
+                             matplotlib=True, show=False)
+    st.pyplot(fig_f)
+except Exception:
+    st.info("Force plot unavailable – showing waterfall instead.")
+    fig_f, _ = plt.subplots()
+    shap.plots.waterfall(
+        shap.Explanation(values=sv[0], base_values=explainer.expected_value,
+                         data=X_user.iloc[0]),
+        max_display=15, show=False)
+    st.pyplot(fig_f)
+    # st.warning("⚠️ Force plot not supported in this environment.")
 
 st.markdown("### 🔎 Interactive Feature Impact")
 feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
