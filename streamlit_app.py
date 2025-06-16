@@ -17,10 +17,6 @@ def load_schema():
     return json.loads(Path("employee_schema.json").read_text())
 
 @st.cache_data
-def load_stats():
-    return json.loads(Path("numeric_stats.json").read_text())
-
-@st.cache_data
 def load_tooltips():
     try:
         return json.loads(Path("feature_tooltips.json").read_text())
@@ -36,7 +32,6 @@ def get_explainer(_model):
 # ═══════════════════════════════════════
 model        = load_model()
 schema_meta  = load_schema()
-num_stats    = load_stats()
 tooltips     = load_tooltips()
 explainer    = get_explainer(model)
 
@@ -52,11 +47,11 @@ def label_risk(p):
     return "🔴 High"
 
 def safe_stats(col):
-    """Return min, max, mean — widened if min==max."""
-    cmin = num_stats.get(col, {}).get("min", 0.0)
-    cmax = num_stats.get(col, {}).get("max", 1.0)
-    cmean = num_stats.get(col, {}).get("mean", (cmin + cmax) / 2)
-    if cmin == cmax:            # widen collapsed range
+    meta = schema_meta.get(col, {})
+    cmin = meta.get("min", 0.0)
+    cmax = meta.get("max", 1.0)
+    cmean = meta.get("mean", (cmin + cmax) / 2)
+    if cmin == cmax:
         cmax = cmin + 1
     return float(cmin), float(cmax), float(cmean)
 
@@ -120,6 +115,9 @@ sample_employee = {
 
 def load_sample():
     for col, val in sample_employee.items():
+        if isinstance(val, (int, float)) and schema_meta[col]["dtype"] != "object":
+            cmin, cmax, _ = safe_stats(col)
+            val = max(min(val, cmax), cmin)
         st.session_state[f"inp_{col}"] = val
 
 def reset_form():
@@ -206,11 +204,8 @@ shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
 
 st.markdown("### 🔎 Interactive Feature Impact")
-
 feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
 idx     = X_user.columns.get_loc(feature)
-
-# shap.bar_plot needs a 1-D array, so wrap the single value in np.array(...)
 single_val_arr = np.array([sv[0][idx]])
 
 fig_bar, _ = plt.subplots()
