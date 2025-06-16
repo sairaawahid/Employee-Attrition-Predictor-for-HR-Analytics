@@ -8,6 +8,13 @@ import json
 from pathlib import Path
 from datetime import datetime
 
+import streamlit as st
+import pandas as pd
+import numpy as np
+import joblib, shap, json, matplotlib.pyplot as plt
+from pathlib import Path
+from datetime import datetime
+
 # ═════════════════════════════════════════════════════════════
 # 1.  CACHED LOADERS
 # ═════════════════════════════════════════════════════════════
@@ -17,7 +24,6 @@ def load_model():
 
 @st.cache_data
 def load_schema():
-    """schema_meta: {col: {dtype: ..., [options|min|max|mean]}}"""
     return json.loads(Path("employee_schema.json").read_text())
 
 @st.cache_data
@@ -32,20 +38,19 @@ def load_tooltips():
     except Exception:
         return {}
 
-# ••• leading “_” so the model isn't hashed (fixes UnhashableParamError)
-@st.cache_resource
+@st.cache_resource          # note leading “_” so model isn’t hashed
 def get_explainer(_model):
     return shap.TreeExplainer(_model)
 
 # ═════════════════════════════════════════════════════════════
-# 2.  INITIALISE
+# 2.  INIT
 # ═════════════════════════════════════════════════════════════
-model         = load_model()
-model_features = model.get_booster().feature_names  # ← NEW
-schema_meta   = load_schema()
-num_stats     = load_stats()
-tooltips      = load_tooltips()
-explainer     = get_explainer(model)
+model          = load_model()
+model_features = model.get_booster().feature_names
+schema_meta    = load_schema()
+num_stats      = load_stats()
+tooltips       = load_tooltips()
+explainer      = get_explainer(model)
 
 if "history" not in st.session_state:
     st.session_state["history"] = pd.DataFrame()
@@ -62,10 +67,10 @@ def safe_stats(col):
     if col in num_stats:
         cmin, cmax = num_stats[col]["min"], num_stats[col]["max"]
         cmean      = num_stats[col]["mean"]
-        if cmin == cmax:              # constant → widen to avoid slider crash
+        if cmin == cmax:           # constant feature → widen to avoid slider crash
             return cmin, cmax + 1, cmin
         return cmin, cmax, cmean
-    return 0.0, 1.0, 0.5
+    return 0.0, 1.0, 0.5           # sensible fallback
 
 # ═════════════════════════════════════════════════════════════
 # 4.  UI HEADER
@@ -78,7 +83,8 @@ with st.expander("📘 How to use this app"):
         """
         * **Sidebar**: enter attributes — or click **Use Sample Data** / **Reset Form**.  
         * Optional: **Upload CSV** for batch scoring.  
-        * View **prediction, SHAP charts, interactive feature impact**, and downloadable history.
+        * Select any row to inspect SHAP explanations for that employee.  
+        * Download or clear **prediction history** at any time.
         """
     )
 
@@ -106,15 +112,11 @@ def sidebar_inputs():
         else:
             cmin, cmax, cmean = safe_stats(col)
             default = float(st.session_state.get(key, cmean))
-            default = max(min(default, cmax), cmin)
+            default = max(min(default, cmax), cmin)      # clamp
             if cmax - cmin <= 1e-9:
-                row[col] = st.sidebar.number_input(
-                    col, value=default, key=key, help=tip
-                )
+                row[col] = st.sidebar.number_input(col, value=default, key=key, help=tip)
             else:
-                row[col] = st.sidebar.slider(
-                    col, cmin, cmax, default, key=key, help=tip
-                )
+                row[col] = st.sidebar.slider(col, cmin, cmax, default, key=key, help=tip)
     return pd.DataFrame(row, index=[0])
 
 # ═════════════════════════════════════════════════════════════
@@ -130,7 +132,11 @@ sample_employee = {
 
 def load_sample():
     for col, val in sample_employee.items():
-        st.session_state[f"inp_{col}"] = val
+        if schema_meta[col]["dtype"] == "object":
+            st.session_state[f"inp_{col}"] = val
+        else:                                  # clamp to stats range
+            cmin, cmax, _ = safe_stats(col)
+            st.session_state[f"inp_{col}"] = max(min(val, cmax), cmin)
 
 def reset_form():
     for col, meta in schema_meta.items():
@@ -153,23 +159,33 @@ else:
     raw_df   = sidebar_inputs()
     batch_on = False
 
+# optional row selector (only when batch upload & >1 row)
+if batch_on and len(raw_df) > 1:
+    idx = st.selectbox(
+        "🔎 Pick a row to inspect",
+        raw_df.index,
+        format_func=lambda i: f"Row {i+1}",
+        key="row_sel",
+    )
+else:
+    idx = 0
+
 # ═════════════════════════════════════════════════════════════
-# 8.  PREPARE FOR MODEL
+# 8.  PREPARE MODEL INPUT
 # ═════════════════════════════════════════════════════════════
-# build a template row so every expected category exists:
-template = {col: (meta["options"][0] if meta["dtype"] == "object" else 0)
-            for col, meta in schema_meta.items()}
+template = {c: (m["options"][0] if m["dtype"] == "object" else 0)
+            for c, m in schema_meta.items()}
 schema_df = pd.DataFrame([template])
 
-X_full  = pd.concat([raw_df, schema_df], ignore_index=True)
-X_dmy   = pd.get_dummies(X_full)
+X_full = pd.concat([raw_df, schema_df], ignore_index=True)
+X_dmy  = pd.get_dummies(X_full)
+X_enc  = X_dmy.reindex(columns=model_features, fill_value=0).iloc[: len(raw_df)]
 
-# ✔ align EXACTLY to model's training features
-X_enc   = X_dmy.reindex(columns=model_features, fill_value=0).iloc[: len(raw_df)]
-X_user  = X_enc.iloc[[0]]
+X_user = X_enc.iloc[[idx]]
+row_for_history = raw_df.iloc[[idx]].copy()
 
 # ═════════════════════════════════════════════════════════════
-# 9.  PREDICT
+# 9.  PREDICT & DISPLAY
 # ═════════════════════════════════════════════════════════════
 pred  = model.predict(X_user)[0]
 prob  = model.predict_proba(X_user)[0, 1]
@@ -186,33 +202,32 @@ c3.metric("Risk Category",   risk)
 # ═════════════════════════════════════════════════════════════
 st.subheader("🔍 SHAP Explanations")
 sv = explainer.shap_values(X_user)
-if isinstance(sv, list):
-    sv = sv[1]
+if isinstance(sv, list): sv = sv[1]
 
 st.markdown("### 🌐 Global Impact — Beeswarm")
-f1, _ = plt.subplots()
+fig1, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
-st.pyplot(f1); plt.clf()
+st.pyplot(fig1); plt.clf()
 
 st.markdown("### 🧭 Decision Path (Individual)")
-f2, _ = plt.subplots()
+fig2, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
-st.pyplot(f2); plt.clf()
+st.pyplot(fig2); plt.clf()
 
 st.markdown("### 🎯 Local Force Plot")
 try:
-    f3 = shap.plots.force(explainer.expected_value, sv[0], X_user.iloc[0],
-                          matplotlib=True, show=False)
-    st.pyplot(f3)
+    fig3 = shap.plots.force(explainer.expected_value, sv[0], X_user.iloc[0],
+                            matplotlib=True, show=False)
+    st.pyplot(fig3)
 except Exception:
     st.info("Force plot fallback to waterfall.")
-    f3, _ = plt.subplots()
+    fig3, _ = plt.subplots()
     shap.plots.waterfall(
         shap.Explanation(values=sv[0],
                          base_values=explainer.expected_value,
                          data=X_user.iloc[0]),
         max_display=15, show=False)
-    st.pyplot(f3)
+    st.pyplot(fig3)
 
 # ═════════════════════════════════════════════════════════════
 # 11.  BATCH SUMMARY
@@ -230,13 +245,12 @@ if batch_on:
 # ═════════════════════════════════════════════════════════════
 # 12.  HISTORY
 # ═════════════════════════════════════════════════════════════
-hist = raw_df.iloc[[0]].copy()
-hist["Prediction"]    = "Yes" if pred else "No"
-hist["Probability"]   = f"{prob:.1%}"
-hist["Risk Category"] = risk
-hist["Timestamp"]     = datetime.now().strftime("%Y-%m-%d %H:%M")
+row_for_history["Prediction"]    = "Yes" if pred else "No"
+row_for_history["Probability"]   = f"{prob:.1%}"
+row_for_history["Risk Category"] = risk
+row_for_history["Timestamp"]     = datetime.now().strftime("%Y-%m-%d %H:%M")
 st.session_state["history"] = pd.concat(
-    [st.session_state["history"], hist], ignore_index=True
+    [st.session_state["history"], row_for_history], ignore_index=True
 )
 
 st.subheader("📥 Prediction History")
