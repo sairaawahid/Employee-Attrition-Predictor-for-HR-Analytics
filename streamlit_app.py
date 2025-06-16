@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-
 # ═════════════════════════════════════════════════════════════
 # 1.  CACHED LOADERS
 # ═════════════════════════════════════════════════════════════
@@ -18,7 +17,7 @@ def load_model():
 
 @st.cache_data
 def load_schema():
-    """Load schema dict: {col: {dtype: ..., [options|min|max|mean]}}"""
+    """schema_meta: {col: {dtype: ..., [options|min|max|mean]}}"""
     return json.loads(Path("employee_schema.json").read_text())
 
 @st.cache_data
@@ -33,19 +32,20 @@ def load_tooltips():
     except Exception:
         return {}
 
-# ⚠️  Key fix: leading underscore so Streamlit skips hashing the model
+# ••• leading “_” so the model isn't hashed (fixes UnhashableParamError)
 @st.cache_resource
 def get_explainer(_model):
     return shap.TreeExplainer(_model)
 
 # ═════════════════════════════════════════════════════════════
-# 2.  INIT
+# 2.  INITIALISE
 # ═════════════════════════════════════════════════════════════
-model       = load_model()
-schema_meta = load_schema()
-num_stats   = load_stats()
-tooltips    = load_tooltips()
-explainer   = get_explainer(model)
+model         = load_model()
+model_features = model.get_booster().feature_names  # ← NEW
+schema_meta   = load_schema()
+num_stats     = load_stats()
+tooltips      = load_tooltips()
+explainer     = get_explainer(model)
 
 if "history" not in st.session_state:
     st.session_state["history"] = pd.DataFrame()
@@ -62,10 +62,10 @@ def safe_stats(col):
     if col in num_stats:
         cmin, cmax = num_stats[col]["min"], num_stats[col]["max"]
         cmean      = num_stats[col]["mean"]
-        if cmin == cmax:          # constant feature
+        if cmin == cmax:              # constant → widen to avoid slider crash
             return cmin, cmax + 1, cmin
         return cmin, cmax, cmean
-    return 0.0, 1.0, 0.5          # fallback defaults
+    return 0.0, 1.0, 0.5
 
 # ═════════════════════════════════════════════════════════════
 # 4.  UI HEADER
@@ -144,25 +144,29 @@ st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
 st.sidebar.button("🔄 Reset Form",     on_click=reset_form)
 
 # ═════════════════════════════════════════════════════════════
-# 7.  COLLECT DATAFRAME
+# 7.  COLLECT INPUT ROW(S)
 # ═════════════════════════════════════════════════════════════
 if uploaded_file is not None:
-    raw_df = pd.read_csv(uploaded_file)
+    raw_df   = pd.read_csv(uploaded_file)
     batch_on = True
 else:
-    raw_df = sidebar_inputs()
+    raw_df   = sidebar_inputs()
     batch_on = False
 
 # ═════════════════════════════════════════════════════════════
-# 8.  MODEL INPUT (ONE-HOT)
+# 8.  PREPARE FOR MODEL
 # ═════════════════════════════════════════════════════════════
+# build a template row so every expected category exists:
 template = {col: (meta["options"][0] if meta["dtype"] == "object" else 0)
             for col, meta in schema_meta.items()}
 schema_df = pd.DataFrame([template])
 
-X_full = pd.concat([raw_df, schema_df], ignore_index=True)
-X_enc  = pd.get_dummies(X_full).iloc[: len(raw_df)]
-X_user = X_enc.iloc[[0]]
+X_full  = pd.concat([raw_df, schema_df], ignore_index=True)
+X_dmy   = pd.get_dummies(X_full)
+
+# ✔ align EXACTLY to model's training features
+X_enc   = X_dmy.reindex(columns=model_features, fill_value=0).iloc[: len(raw_df)]
+X_user  = X_enc.iloc[[0]]
 
 # ═════════════════════════════════════════════════════════════
 # 9.  PREDICT
@@ -226,13 +230,13 @@ if batch_on:
 # ═════════════════════════════════════════════════════════════
 # 12.  HISTORY
 # ═════════════════════════════════════════════════════════════
-row = raw_df.iloc[[0]].copy()
-row["Prediction"]    = "Yes" if pred else "No"
-row["Probability"]   = f"{prob:.1%}"
-row["Risk Category"] = risk
-row["Timestamp"]     = datetime.now().strftime("%Y-%m-%d %H:%M")
+hist = raw_df.iloc[[0]].copy()
+hist["Prediction"]    = "Yes" if pred else "No"
+hist["Probability"]   = f"{prob:.1%}"
+hist["Risk Category"] = risk
+hist["Timestamp"]     = datetime.now().strftime("%Y-%m-%d %H:%M")
 st.session_state["history"] = pd.concat(
-    [st.session_state["history"], row], ignore_index=True
+    [st.session_state["history"], hist], ignore_index=True
 )
 
 st.subheader("📥 Prediction History")
