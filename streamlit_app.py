@@ -206,10 +206,20 @@ shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
 
 st.markdown("### 🔎 Interactive Feature Impact")
-feature = st.selectbox("Choose feature", X_user.columns)
+
+feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
 idx     = X_user.columns.get_loc(feature)
+
+# shap.bar_plot needs a 1-D array, so wrap the single value in np.array(...)
+single_val_arr = np.array([sv[0][idx]])
+
 fig_bar, _ = plt.subplots()
-shap.bar_plot(np.array([sv[0][idx]]), feature_names=[feature], show=False)
+shap.bar_plot(
+    shap_values=single_val_arr,
+    feature_names=[feature],
+    max_display=1,
+    show=False,
+)
 st.pyplot(fig_bar); plt.clf()
 
 # ═══════════════════════════════════════
