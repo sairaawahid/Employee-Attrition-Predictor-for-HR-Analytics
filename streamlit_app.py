@@ -73,7 +73,7 @@ with st.expander("📘 How to use this app", expanded=False):
 4. Click **Prediction** to see risk, probability & calibrated risk category.  
 5. Explore **SHAP plots** to understand which factors drive each prediction.  
 6. Use the **Interactive Feature Impact** to inspect any feature.  
-7. **Download or clear History** to track past predictions and share insights.
+7. **Download or Clear History** to track past predictions and share insights.
         """
     )
 
