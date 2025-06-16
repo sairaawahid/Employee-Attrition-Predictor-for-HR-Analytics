@@ -179,7 +179,7 @@
     },
     "StandardHours": {
         "dtype": "int64",
-        "min": 80.0,
+        "min": 10.0,
         "max": 80.0,
         "mean": 80.0
     },
