@@ -67,10 +67,10 @@ st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
 with st.expander("📘 How to use this app", expanded=False):
     st.markdown(
         """
-1. **Enter employee details** in the sidebar.
-2. **Use Sample Data** for a demo or **Reset Form** to start fresh.
+1. **Enter employee details** in the sidebar or **Use Sample Data** for a demo.
+2. Click **Reset Form** to start fresh.
 3. **Upload a CSV (optional)** for bulk scoring and row-by-row inspection.  
-4. Click **Prediction** to see risk, probability & calibrated risk category.  
+4. Click **Prediction** to see risk, probability & risk category.  
 5. Explore **SHAP plots** to understand which factors drive each prediction.  
 6. Use the **Interactive Feature Impact** to inspect any feature.  
 7. **Download or Clear History** to track past predictions and share insights.
