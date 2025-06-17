@@ -75,11 +75,13 @@ st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
 with st.expander("📘 How to use this app", expanded=False):
     st.markdown(
         """
-1. Fill in employee attributes in the sidebar – or click **Use Sample Data**.  
-2. *(Optional)* upload a CSV for batch scoring.  
-3. Click **🔮 Run Prediction** to see risk, probability & SHAP explanations.  
-4. Use **Interactive Feature Impact** to inspect any single feature.  
-5. **Download / Clear History** to manage previous predictions.
+1. **Enter employee details** in the sidebar or **Use Sample Data** for a demo.
+2. Click **Reset Form** to start fresh.
+3. **Upload a CSV (optional)** for bulk scoring and row-by-row inspection.  
+4. Click **Run Prediction** to see risk, probability & risk category.  
+5. Explore **SHAP plots** to understand which factors drive each prediction.  
+6. Use the **Interactive Feature Impact** to inspect any feature.  
+7. **Download or Clear History** to track past predictions and share insights.
         """
     )
 
@@ -178,7 +180,7 @@ def reset_form():
             st.session_state[key] = safe_stats(col)[0]   # min
 
 
-st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
+st.sidebar.button("Use Sample Data", on_click=load_sample)
 st.sidebar.button("🔄 Reset Form", on_click=reset_form)
 
 # ═══════════════════════════════════════
@@ -192,7 +194,7 @@ else:
     batch_mode = False
 
 # A button the user must click to trigger prediction
-run_pred = st.sidebar.button("🔮 Run Prediction", use_container_width=True)
+run_pred = st.sidebar.button("Run Prediction", use_container_width=True)
 
 # Stop here until the user clicks the button
 if not run_pred:
@@ -251,8 +253,9 @@ risk = label_risk(prob)
 
 st.markdown("### 🎯 Prediction")
 st.info(
-    "Below you’ll see whether the employee is likely to leave the company, "
+    "Below you’ll see whether the employee is likely to leave the company (Yes/No), "
     "the exact probability, and the calibrated risk category."
+    "**Low (<30%)**, **Moderate (30–60%)**, or **High (>60%)**."
 )
 
 # Styled box container
@@ -286,18 +289,26 @@ if isinstance(sv, list):
 
 st.markdown("### 🌐 Global Impact — Beeswarm")
 st.info(
-    "Shows which features had the **highest overall impact** on the prediction."
+    "This plot shows which features had the **highest overall impact** "
+    "on the model’s prediction for this employee. Longer bars = stronger effect. "
+    "Colors indicate whether the value pushed the prediction higher (red) or lower (blue)."
 )
 fig_bsw, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_bsw); plt.clf()
 
 st.markdown("### 🧭 Decision Path")
+st.info("This plot explains the **sequence of contributions** each feature made, "
+        "starting from the model’s baseline prediction. Features that increased or "
+        "decreased the risk are shown from left to right, helping you follow the model’s logic.")
 fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
 
 st.markdown("### 🎯 Local Force Plot")
+st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
+        "higher (red) vs. lower (blue). It gives an intuitive sense of what tipped the balance "
+        "towards a high or low attrition risk for this specific case.")
 try:
     fig_f = shap.plots.force(
         explainer.expected_value,
@@ -322,6 +333,9 @@ except Exception:
     st.pyplot(fig_f)
 
 st.markdown("### 🔎 Interactive Feature Impact")
+st.info("Select a feature to see **how much it individually influenced** the prediction. "
+        "This bar shows whether the chosen feature increased or decreased attrition risk "
+        "and by how much in the context of this specific employee.")
 feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
 idx = X_user.columns.get_loc(feature)
 val = sv[0][idx] if sv.ndim == 2 else sv[idx]
