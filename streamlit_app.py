@@ -288,11 +288,9 @@ if isinstance(sv, list):
     sv = sv[1]
 
 st.markdown("### 🌐 Global Impact — Beeswarm")
-st.info(
-    "This plot shows which features had the **highest overall impact** "
-    "on the model’s prediction for this employee. Longer bars = stronger effect. "
-    "Colors indicate whether the value pushed the prediction higher (red) or lower (blue)."
-)
+st.info("This plot shows which features **had the highest overall impact** "
+        "on the model’s prediction for this employee. Longer bars = stronger effect. "
+        "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
 fig_bsw, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_bsw); plt.clf()
