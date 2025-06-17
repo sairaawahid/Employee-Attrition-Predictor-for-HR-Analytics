@@ -71,8 +71,8 @@ def safe_stats(col):
 # ═══════════════════════════════════════
 st.title("Employee Attrition Predictor")
 st.markdown(
-    "A decision-support tool for HR professionals to predict employee attrition and understand the key reasons behind the prediction."
-    "Get clear insights with probability scores, risk levels, and **SHAP**-powered visual explanations."
+    "A decision-support tool for HR professionals to predict employee attrition and understand the key reasons behind the prediction. "
+    "Get clear insights with probability scores, risk levels, and **SHAP**-powered visual explanations for informed talent management."
 )
 
 with st.expander("📘 How to use this app", expanded=False):
