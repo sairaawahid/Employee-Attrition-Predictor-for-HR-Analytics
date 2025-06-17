@@ -70,7 +70,10 @@ def safe_stats(col):
 # 4.  UI Header & Guide
 # ═══════════════════════════════════════
 st.title("Employee Attrition Predictor")
-st.markdown("Predict attrition risk and explore explanations with **SHAP**.")
+st.markdown(
+    "This app predicts the likelihood of employee attrition and explores the key reasons behind the prediction. "
+    "Get clear insights with probability scores, risk levels, and **SHAP**-powered visual explanations."
+)
 
 with st.expander("📘 How to use this app", expanded=False):
     st.markdown(
