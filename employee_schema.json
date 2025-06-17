@@ -118,20 +118,20 @@
     },
     "Monthly Income": {
         "dtype": "int64",
-        "min": 1009.0,
+        "min": 1000.0,
         "max": 19999.0,
         "mean": 6502.931292517007
     },
     "Monthly Rate": {
         "dtype": "int64",
-        "min": 2094.0,
-        "max": 26999.0,
+        "min": 2000.0,
+        "max": 29999.0,
         "mean": 14313.103401360544
     },
     "No. of Companies Worked": {
         "dtype": "int64",
         "min": 0.0,
-        "max": 9.0,
+        "max": 10.0,
         "mean": 2.6931972789115646
     },
     "Over Time": {
@@ -143,8 +143,8 @@
     },
     "Percent Salary Hike": {
         "dtype": "int64",
-        "min": 11.0,
-        "max": 25.0,
+        "min": 5.0,
+        "max": 100.0,
         "mean": 15.209523809523809
     },
     "Performance Rating": {
@@ -192,19 +192,19 @@
     "Years In Current Role": {
         "dtype": "int64",
         "min": 0.0,
-        "max": 18.0,
+        "max": 40.0,
         "mean": 4.229251700680272
     },
     "Years Since Last Promotion": {
         "dtype": "int64",
         "min": 0.0,
-        "max": 15.0,
+        "max": 20.0,
         "mean": 2.1877551020408164
     },
     "Years With Current Manager": {
         "dtype": "int64",
         "min": 0.0,
-        "max": 17.0,
+        "max": 20.0,
         "mean": 4.12312925170068
     }
 }
