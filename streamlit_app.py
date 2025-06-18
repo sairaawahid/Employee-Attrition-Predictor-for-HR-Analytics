@@ -75,7 +75,7 @@ st.markdown(
     "Get clear insights with probability scores, risk levels, and SHAP-powered visual explanations for informed talent management."
 )
 
-with st.expander("📘 How to use this app", expanded=False):
+with st.expander("**How to use this app**", expanded=False):
     st.markdown(
         """
 1. **Enter employee details** in the sidebar or **Use Sample Data** for a demo.
@@ -224,7 +224,7 @@ if batch_mode:
     raw_df["Probability"]   = (probs * 100).round(1).astype(str) + " %"
     raw_df["Risk Category"] = [label_risk(p) for p in probs]
 
-    st.subheader("📑 Batch Prediction Summary")
+    st.subheader("Batch Prediction Summary")
     st.info(
         "This table summarizes attrition predictions for all uploaded employees. "
         "Each row shows whether the employee is predicted to leave (Yes/No), "
@@ -254,7 +254,7 @@ pred = model.predict(X_user)[0]
 prob = model.predict_proba(X_user)[0, 1]
 risk = label_risk(prob)
 
-st.markdown("### 🎯 Prediction")
+st.markdown("### Prediction Results")
 st.info(
     "Below you’ll see whether the employee is likely to leave the company (Yes/No), "
     "the exact probability, and the calibrated risk category."
@@ -290,7 +290,7 @@ sv = explainer.shap_values(X_user)
 if isinstance(sv, list):
     sv = sv[1]
 
-st.markdown("### 🌐 Global Impact — Beeswarm")
+st.markdown("### Global Impact — Beeswarm")
 st.info("This plot shows which features **had the highest overall impact** "
         "on the model’s prediction for this employee. Longer bars = stronger effect. "
         "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
@@ -298,7 +298,7 @@ fig_bsw, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_bsw); plt.clf()
 
-st.markdown("### 🧭 Decision Path")
+st.markdown("### Decision Path")
 st.info("This plot explains the **sequence of contributions** each feature made, "
         "starting from the model’s baseline prediction. Features that increased or "
         "decreased the risk are shown from left to right, helping you follow the model’s logic.")
@@ -306,7 +306,7 @@ fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
 
-st.markdown("### 🎯 Local Force Plot")
+st.markdown("### Local Force Plot")
 st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
         "higher (red) vs. lower (blue). It gives an intuitive sense of what tipped the balance "
         "towards a high or low attrition risk for this specific case.")
@@ -333,7 +333,7 @@ except Exception:
     )
     st.pyplot(fig_f)
 
-st.markdown("### 🔎 Interactive Feature Impact")
+st.markdown("### Interactive Feature Impact")
 st.info("Select a feature to see **how much it individually influenced** the prediction. "
         "This bar shows whether the chosen feature increased or decreased attrition risk "
         "and by how much in the context of this specific employee.")
@@ -356,7 +356,7 @@ st.session_state["history"] = pd.concat(
     [st.session_state["history"], user_df], ignore_index=True
 )
 
-st.subheader("📥 Prediction History")
+st.subheader("Prediction History")
 st.dataframe(st.session_state["history"], use_container_width=True)
 csv_hist = st.session_state["history"].to_csv(index=False).encode()
 st.download_button(
