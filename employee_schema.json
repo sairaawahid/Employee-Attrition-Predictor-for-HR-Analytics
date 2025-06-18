@@ -3,7 +3,6 @@
         "dtype": "int64",
         "min": 18,
         "max": 60,
-        "mean": 36.923809523809524
     },
     "Attrition": {
         "dtype": "object",
@@ -49,10 +48,14 @@
         "mean": 9.19251700680272
     },
     "Education": {
-        "dtype": "int64",
-        "min": 1,
-        "max": 5,
-        "mean": 2.912925170068027
+        "dtype": "object",
+        "options": [
+            "Below College",
+            "College",
+            "Bachelor's",
+            "Master's",
+            "Doctorate"
+        ]
     },
     "Education Field": {
         "dtype": "object",
@@ -75,7 +78,6 @@
         "dtype": "int64",
         "min": 1,
         "max": 4,
-        "mean": 2.721768707482993
     },
     "Gender": {
         "dtype": "object",
@@ -96,13 +98,11 @@
         "dtype": "int64",
         "min": 1,
         "max": 4,
-        "mean": 2.7299319727891156
     },
     "Job Level": {
         "dtype": "int64",
         "min": 1,
         "max": 5,
-        "mean": 2.0639455782312925
     },
     "Job Role": {
         "dtype": "object",
@@ -128,7 +128,6 @@
         "dtype": "int64",
         "min": 1,
         "max": 4,
-        "mean": 2.7285714285714286
     },
     "Marital Status": {
         "dtype": "object",
@@ -140,38 +139,37 @@
         ]
     },
     "Monthly Income": {
-    "dtype": "object",
-    "options": [
-      "Select---",
-      "1 000 – 1 999",
-      "2 000 – 2 999",
-      "3 000 – 3 999",
-      "4 000 – 4 999",
-      "5 000 – 5 999",
-      "6 000 – 7 999",
-      "8 000 – 9 999",
-      "10 000 – 14 999",
-      "15 000 – 19 999",
-      "20 000 – 29 999"
-    ]
+        "dtype": "object",
+        "options": [
+            "Select---",
+            "1 000 – 1 999",
+            "2 000 – 2 999",
+            "3 000 – 3 999",
+            "4 000 – 4 999",
+            "5 000 – 5 999",
+            "6 000 – 7 999",
+            "8 000 – 9 999",
+            "10 000 – 14 999",
+            "15 000 – 19 999",
+            "20 000 – 29 999"
+        ]
   },
     "Monthly Rate": {
-    "dtype": "object",
-    "options": [
-      "Select---",
-      "2 000 – 4 999",
-      "5 000 – 7 999",
-      "8 000 – 9 999",
-      "10 000 – 14 999",
-      "15 000 – 19 999",
-      "20 000 – 29 999"
-    ]
+     "dtype": "object",
+     "options": [
+         "Select---",
+         "2 000 – 4 999",
+         "5 000 – 7 999",
+         "8 000 – 9 999",
+         "10 000 – 14 999",
+         "15 000 – 19 999",
+         "20 000 – 29 999"
+     ]
     },
     "No. of Companies Worked": {
         "dtype": "int64",
         "min": 1,
         "max": 10,
-        "mean": 2.6931972789115646
     },
     "Over Time": {
         "dtype": "object",
@@ -191,13 +189,11 @@
         "dtype": "int64",
         "min": 1,
         "max": 4,
-        "mean": 3.1537414965986397
     },
     "Relationship Satisfaction": {
         "dtype": "int64",
         "min": 1,
         "max": 4,
-        "mean": 2.7122448979591836
     },
     "Stock Option Level": {
         "dtype": "int64",
@@ -215,36 +211,30 @@
         "dtype": "int64",
         "min": 0,
         "max": 10,
-        "mean": 2.7993197278911564
     },
     "Work Life Balance": {
         "dtype": "int64",
         "min": 1,
         "max": 4,
-        "mean": 2.7612244897959184
     },
     "Years At Company": {
         "dtype": "int64",
         "min": 0,
         "max": 40,
-        "mean": 7.0081632653061225
     },
     "Years In Current Role": {
         "dtype": "int64",
         "min": 0,
         "max": 40,
-        "mean": 4.229251700680272
     },
     "Years Since Last Promotion": {
         "dtype": "int64",
         "min": 0,
         "max": 20,
-        "mean": 2.1877551020408164
     },
     "Years With Current Manager": {
         "dtype": "int64",
         "min": 0,
         "max": 20,
-        "mean": 4.12312925170068
     }
 }
