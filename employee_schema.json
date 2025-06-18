@@ -8,6 +8,7 @@
     "Attrition": {
         "dtype": "object",
         "options": [
+            "Select---",
             "No",
             "Yes"
         ]
@@ -15,6 +16,7 @@
     "Business Travel": {
         "dtype": "object",
         "options": [
+            "Select---",
             "Non-Travel",
             "Travel_Frequently",
             "Travel_Rarely"
@@ -29,15 +31,21 @@
     "Department": {
         "dtype": "object",
         "options": [
+            "Select---",
             "Human Resources",
+            "Finance",
+            "Information Technology",
+            "Operations",
             "Research & Development",
-            "Sales"
+            "Sales",
+            "Supply Chain",
+            "Other"
         ]
-    },
+  },
     "Distance From Home": {
         "dtype": "int64",
         "min": 1,
-        "max": 30,
+        "max": 29,
         "mean": 9.19251700680272
     },
     "Education": {
@@ -49,12 +57,18 @@
     "Education Field": {
         "dtype": "object",
         "options": [
+            "Select---",
+            "Arts & Humanities",
+            "Business",
+            "Computer Science",
+            "Engineering",
             "Human Resources",
             "Life Sciences",
             "Marketing",
             "Medical",
-            "Other",
-            "Technical Degree"
+            "Psychology",
+            "Technical Degree",
+            "Other"
         ]
     },
     "Environment Satisfaction": {
@@ -66,8 +80,9 @@
     "Gender": {
         "dtype": "object",
         "options": [
+            "Select---",
             "Female",
-            "Male"
+            "Male",
             "Other"
         ]
     },
@@ -92,15 +107,21 @@
     "Job Role": {
         "dtype": "object",
         "options": [
+            "Select---",
+            "Data Analyst",
+            "Finance Manager",
             "Healthcare Representative",
             "Human Resources",
             "Laboratory Technician",
             "Manager",
             "Manufacturing Director",
+            "Project Manager",
             "Research Director",
             "Research Scientist",
             "Sales Executive",
-            "Sales Representative"
+            "Sales Representative",
+            "Software Engineer",
+            "Other"
         ]
     },
     "Job Satisfaction": {
@@ -112,22 +133,39 @@
     "Marital Status": {
         "dtype": "object",
         "options": [
+            "Select---",
             "Divorced",
             "Married",
             "Single"
         ]
     },
     "Monthly Income": {
-        "dtype": "int64",
-        "min": 1000,
-        "max": 29999.0,
-        "mean": 6502.931292517007
-    },
+    "dtype": "object",
+    "options": [
+      "Select---",
+      "1 000 – 1 999",
+      "2 000 – 2 999",
+      "3 000 – 3 999",
+      "4 000 – 4 999",
+      "5 000 – 5 999",
+      "6 000 – 7 999",
+      "8 000 – 9 999",
+      "10 000 – 14 999",
+      "15 000 – 19 999",
+      "20 000 – 29 999"
+    ]
+  },
     "Monthly Rate": {
-        "dtype": "int64",
-        "min": 2000.0,
-        "max": 29999.0,
-        "mean": 14313.103401360544
+    "dtype": "object",
+    "options": [
+      "Select---",
+      "2 000 – 4 999",
+      "5 000 – 7 999",
+      "8 000 – 9 999",
+      "10 000 – 14 999",
+      "15 000 – 19 999",
+      "20 000 – 29 999"
+    ]
     },
     "No. of Companies Worked": {
         "dtype": "int64",
@@ -138,6 +176,7 @@
     "Over Time": {
         "dtype": "object",
         "options": [
+            "Select---",
             "No",
             "Yes"
         ]
@@ -192,8 +231,8 @@
     },
     "Years In Current Role": {
         "dtype": "int64",
-        "min": 0.0,
-        "max": 40.0,
+        "min": 0,
+        "max": 40,
         "mean": 4.229251700680272
     },
     "Years Since Last Promotion": {
