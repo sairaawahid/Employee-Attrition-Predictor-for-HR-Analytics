@@ -1,8 +1,8 @@
 {
     "Age": {
         "dtype": "int64",
-        "min": 18.0,
-        "max": 60.0,
+        "min": 18,
+        "max": 60,
         "mean": 36.923809523809524
     },
     "Attrition": {
@@ -22,8 +22,8 @@
     },
     "Daily Rate": {
         "dtype": "int64",
-        "min": 102.0,
-        "max": 1499.0,
+        "min": 100,
+        "max": 1500,
         "mean": 802.4857142857143
     },
     "Department": {
@@ -36,14 +36,14 @@
     },
     "Distance From Home": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 29.0,
+        "min": 1,
+        "max": 30,
         "mean": 9.19251700680272
     },
     "Education": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 5.0,
+        "min": 1,
+        "max": 5,
         "mean": 2.912925170068027
     },
     "Education Field": {
@@ -59,8 +59,8 @@
     },
     "Environment Satisfaction": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 4.0,
+        "min": 1,
+        "max": 4,
         "mean": 2.721768707482993
     },
     "Gender": {
@@ -68,24 +68,25 @@
         "options": [
             "Female",
             "Male"
+            "Other"
         ]
     },
     "Hourly Rate": {
         "dtype": "int64",
-        "min": 30.0,
-        "max": 100.0,
+        "min": 30,
+        "max": 100,
         "mean": 65.89115646258503
     },
     "Job Involvement": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 4.0,
+        "min": 1,
+        "max": 4,
         "mean": 2.7299319727891156
     },
     "Job Level": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 5.0,
+        "min": 1,
+        "max": 5,
         "mean": 2.0639455782312925
     },
     "Job Role": {
@@ -104,8 +105,8 @@
     },
     "Job Satisfaction": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 4.0,
+        "min": 1,
+        "max": 4,
         "mean": 2.7285714285714286
     },
     "Marital Status": {
@@ -118,8 +119,8 @@
     },
     "Monthly Income": {
         "dtype": "int64",
-        "min": 1000.0,
-        "max": 19999.0,
+        "min": 1000,
+        "max": 29999.0,
         "mean": 6502.931292517007
     },
     "Monthly Rate": {
@@ -130,8 +131,8 @@
     },
     "No. of Companies Worked": {
         "dtype": "int64",
-        "min": 0.0,
-        "max": 10.0,
+        "min": 1,
+        "max": 10,
         "mean": 2.6931972789115646
     },
     "Over Time": {
@@ -143,50 +144,50 @@
     },
     "Percent Salary Hike": {
         "dtype": "int64",
-        "min": 5.0,
-        "max": 100.0,
+        "min": 5,
+        "max": 100,
         "mean": 15.209523809523809
     },
     "Performance Rating": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 4.0,
+        "min": 1,
+        "max": 4,
         "mean": 3.1537414965986397
     },
     "Relationship Satisfaction": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 4.0,
+        "min": 1,
+        "max": 4,
         "mean": 2.7122448979591836
     },
     "Stock Option Level": {
         "dtype": "int64",
-        "min": 0.0,
-        "max": 3.0,
+        "min": 0,
+        "max": 3,
         "mean": 0.7938775510204081
     },
     "Total Working Years": {
         "dtype": "int64",
-        "min": 0.0,
-        "max": 40.0,
+        "min": 0,
+        "max": 40,
         "mean": 11.279591836734694
     },
     "Training Times Last Year": {
         "dtype": "int64",
-        "min": 0.0,
-        "max": 10.0,
+        "min": 0,
+        "max": 10,
         "mean": 2.7993197278911564
     },
     "Work Life Balance": {
         "dtype": "int64",
-        "min": 1.0,
-        "max": 4.0,
+        "min": 1,
+        "max": 4,
         "mean": 2.7612244897959184
     },
     "Years At Company": {
         "dtype": "int64",
-        "min": 0.0,
-        "max": 40.0,
+        "min": 0,
+        "max": 40,
         "mean": 7.0081632653061225
     },
     "Years In Current Role": {
@@ -197,14 +198,14 @@
     },
     "Years Since Last Promotion": {
         "dtype": "int64",
-        "min": 0.0,
-        "max": 20.0,
+        "min": 0,
+        "max": 20,
         "mean": 2.1877551020408164
     },
     "Years With Current Manager": {
         "dtype": "int64",
-        "min": 0.0,
-        "max": 20.0,
+        "min": 0,
+        "max": 20,
         "mean": 4.12312925170068
     }
 }
