@@ -2,7 +2,7 @@
     "Age": {
         "dtype": "int64",
         "min": 18,
-        "max": 60,
+        "max": 60
     },
     "Attrition": {
         "dtype": "object",
@@ -77,7 +77,7 @@
     "Environment Satisfaction": {
         "dtype": "int64",
         "min": 1,
-        "max": 4,
+        "max": 4
     },
     "Gender": {
         "dtype": "object",
@@ -97,12 +97,12 @@
     "Job Involvement": {
         "dtype": "int64",
         "min": 1,
-        "max": 4,
+        "max": 4
     },
     "Job Level": {
         "dtype": "int64",
         "min": 1,
-        "max": 5,
+        "max": 5
     },
     "Job Role": {
         "dtype": "object",
@@ -127,7 +127,7 @@
     "Job Satisfaction": {
         "dtype": "int64",
         "min": 1,
-        "max": 4,
+        "max": 4
     },
     "Marital Status": {
         "dtype": "object",
@@ -169,7 +169,7 @@
     "No. of Companies Worked": {
         "dtype": "int64",
         "min": 1,
-        "max": 10,
+        "max": 10
     },
     "Over Time": {
         "dtype": "object",
@@ -188,12 +188,12 @@
     "Performance Rating": {
         "dtype": "int64",
         "min": 1,
-        "max": 4,
+        "max": 4
     },
     "Relationship Satisfaction": {
         "dtype": "int64",
         "min": 1,
-        "max": 4,
+        "max": 4
     },
     "Stock Option Level": {
         "dtype": "int64",
@@ -210,31 +210,31 @@
     "Training Times Last Year": {
         "dtype": "int64",
         "min": 0,
-        "max": 10,
+        "max": 10
     },
     "Work Life Balance": {
         "dtype": "int64",
         "min": 1,
-        "max": 4,
+        "max": 4
     },
     "Years At Company": {
         "dtype": "int64",
         "min": 0,
-        "max": 40,
+        "max": 40
     },
     "Years In Current Role": {
         "dtype": "int64",
         "min": 0,
-        "max": 40,
+        "max": 40
     },
     "Years Since Last Promotion": {
         "dtype": "int64",
         "min": 0,
-        "max": 20,
+        "max": 20
     },
     "Years With Current Manager": {
         "dtype": "int64",
         "min": 0,
-        "max": 20,
+        "max": 20
     }
 }
