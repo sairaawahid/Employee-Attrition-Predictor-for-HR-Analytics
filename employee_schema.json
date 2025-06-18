@@ -50,6 +50,7 @@
     "Education": {
         "dtype": "object",
         "options": [
+            "Select---",
             "Below College",
             "College",
             "Bachelor's",
