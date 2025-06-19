@@ -3,7 +3,7 @@
         "dtype": "int64",
         "min": 18,
         "max": 60
-        "discrete": true
+        # "discrete": true
     },
     "Attrition": {
         "dtype": "object",
