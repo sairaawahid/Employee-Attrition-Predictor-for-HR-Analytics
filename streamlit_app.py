@@ -60,7 +60,7 @@ if st.button("🗑️ Clear History"):
     st.session_state["history"] = pd.DataFrame()
     st.session_state["prediction_done"] = False
     st.session_state["just_cleared_history"] = True
-    st.experimental_rerun()
+    st.rerun()
 
 if st.session_state.get("just_cleared_history", False):
     st.session_state["just_cleared_history"] = False
@@ -106,8 +106,9 @@ def sidebar_inputs() -> pd.DataFrame:
             cmin, cmax, _ = safe_stats(col)
             cur = float(st.session_state.get(key, cmin))
             cur = min(max(cur, cmin), cmax)
+            # --- PATCH: ensure step is always float ---
             step = 1.0 if meta.get("discrete", False) else 0.1
-            row[col] = st.sidebar.slider(col, cmin, cmax, value=cur, step=step, key=key, help=tip)
+            row[col] = st.sidebar.slider(col, float(cmin), float(cmax), value=cur, step=step, key=key, help=tip)
     return pd.DataFrame([row])
 
 def label_risk(p):
