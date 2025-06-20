@@ -38,6 +38,8 @@ if "history" not in st.session_state:
     st.session_state["history"] = pd.DataFrame()
 if "prediction_done" not in st.session_state:
     st.session_state["prediction_done"] = False
+if "just_cleared_history" not in st.session_state:
+    st.session_state["just_cleared_history"] = False
 
 model        = load_model()
 schema_meta  = load_schema()
@@ -330,7 +332,14 @@ csv_hist = st.session_state["history"].to_csv(index=False).encode()
 st.download_button("💾 Download History", csv_hist, "prediction_history.csv",
                    "text/csv")
 
+# -- Clear History button and logic --
 if st.button("🗑️ Clear History"):
     st.session_state["history"] = pd.DataFrame()
-    st.session_state["prediction_done"] = True
+    st.session_state["prediction_done"] = False
+    st.session_state["just_cleared_history"] = True
     st.experimental_rerun()
+
+# -- Block any prediction/append immediately after clearing --
+if st.session_state.get("just_cleared_history", False):
+    st.session_state["just_cleared_history"] = False
+    st.stop()
