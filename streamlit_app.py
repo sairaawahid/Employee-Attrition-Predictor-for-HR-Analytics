@@ -332,8 +332,5 @@ st.download_button("💾 Download History", csv_hist, "prediction_history.csv",
 
 if st.button("🗑️ Clear History"):
     st.session_state["history"] = pd.DataFrame()
-    st.session_state["prediction_done"] = True   # skip immediate append
-    st.rerun()
-else:
-    # allow logging on the *next* click
-    st.session_state["prediction_done"] = False
+    st.session_state["prediction_done"] = True
+    st.experimental_rerun()
