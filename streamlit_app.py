@@ -245,7 +245,7 @@ st.markdown(
 # 11.  SHAP explanations
 # ═══════════════════════════════════════
 st.subheader("🔍 SHAP Explanations")
-st.info(
+st.markdown(
     "These plots show **which features push the prediction higher or lower.** "
     "▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying."
 )
