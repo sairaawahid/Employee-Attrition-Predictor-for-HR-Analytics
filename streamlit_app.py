@@ -15,11 +15,9 @@ from datetime import datetime
 def load_model():
     return joblib.load("xgboost_optimized_model.pkl")
 
-
 @st.cache_data
 def load_schema():
     return json.loads(Path("employee_schema.json").read_text())
-
 
 @st.cache_data
 def load_tooltips():
@@ -27,7 +25,6 @@ def load_tooltips():
         return json.loads(Path("feature_tooltips.json").read_text())
     except Exception:
         return {}
-
 
 @st.cache_resource
 def get_explainer(_model):
@@ -37,6 +34,12 @@ def get_explainer(_model):
 # ═══════════════════════════════════════
 # 2.  Initialise
 # ═══════════════════════════════════════
+
+if "history" not in st.session_state:
+    st.session_state["history"] = pd.DataFrame()
+if "skip_append" not in st.session_state:
+    st.session_state["skip_append"] = False
+
 model        = load_model()
 schema_meta  = load_schema()
 tooltips     = load_tooltips()
@@ -49,20 +52,16 @@ if "history" not in st.session_state:
 # 3.  Helpers
 # ═══════════════════════════════════════
 def label_risk(p):
-    if p < .30:
-        return "🟢 Low"
-    if p < .60:
-        return "🟡 Moderate"
-    return "🔴 High"
+    return "🟢 Low" if p < .30 else "🟡 Moderate" if p < .60 else "🔴 High"
 
 
 def safe_stats(col):
     meta  = schema_meta.get(col, {})
-    cmin  = meta.get("min", 0.0)
-    cmax  = meta.get("max", 1.0)
+    cmin  = meta.get("min", 0)
+    cmax  = meta.get("max", 1)
     cmean = meta.get("mean", (cmin + cmax) / 2)
     if cmin == cmax:
-        cmax = cmin + 1      # widen if collapsed
+        cmax = cmin + 1   
     return float(cmin), float(cmax), float(cmean)
 
 
@@ -74,7 +73,6 @@ st.markdown(
     "A decision-support tool for HR professionals to predict employee attrition and understand the key reasons behind the prediction. "
     "Get clear insights with probability scores, risk levels, and SHAP-powered visual explanations for informed talent management."
 )
-
 with st.expander("**How to use this app**", expanded=False):
     st.markdown(
         """
@@ -85,8 +83,7 @@ with st.expander("**How to use this app**", expanded=False):
 5. Explore **SHAP plots** to understand which factors drive each prediction.  
 6. Use the **Interactive Feature Impact** to inspect any feature.  
 7. **Download or Clear History** to track past predictions and share insights.
-        """
-    )
+        """)
 
 uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
 
@@ -95,7 +92,6 @@ uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
 # ═══════════════════════════════════════
 st.sidebar.header("📋 Employee Attributes")
 
-
 def sidebar_inputs() -> pd.DataFrame:
     """Render widgets; return single-row DataFrame."""
     row = {}
@@ -103,16 +99,18 @@ def sidebar_inputs() -> pd.DataFrame:
         key = f"inp_{col}"
         tip = tooltips.get(col.split("_")[0], "")
 
+        # ── categorical values──
         if meta["dtype"] == "object":
             options = meta.get("options", ["Unknown"])
             cur = st.session_state.get(key, options[0])
             if cur not in options:
                 cur = options[0]
             row[col] = st.sidebar.selectbox(col, options, key=key, help=tip)
+        
+        # ── numeric values──
         else:
             cmin, cmax, _ = safe_stats(col)
             cur = float(st.session_state.get(key, cmin))
-
             # clamp to bounds
             cur = min(max(cur, cmin), cmax)
 
@@ -120,6 +118,7 @@ def sidebar_inputs() -> pd.DataFrame:
             if discrete:
                 # cast everything to float so Streamlit types match
                 cmin, cmax, cur, step = map(float, (int(cmin), int(cmax), int(cur), 1))
+                step = 1.0
             else:
                 step = 0.1
 
@@ -152,7 +151,6 @@ sample_employee = {
     "Job Satisfaction": 2,
     "Marital Status": "Single",
     "Monthly Income": "5 000 – 5 999",
-    "Monthly Rate": "10 000 – 14 999",
     "No. of Companies Worked": 2,
     "Over Time": "Yes",
     "Percent Salary Hike": 13,
@@ -168,7 +166,6 @@ sample_employee = {
     "Years With Current Manager": 2,
 }
 
-
 def load_sample():
     for col, val in sample_employee.items():
         if col not in schema_meta:
@@ -178,15 +175,13 @@ def load_sample():
             val = max(min(val, cmax), cmin)
         st.session_state[f"inp_{col}"] = val
 
-
 def reset_form():
     for col, meta in schema_meta.items():
         key = f"inp_{col}"
         if meta["dtype"] == "object":
             st.session_state[key] = meta.get("options", ["Unknown"])[0]
         else:
-            st.session_state[key] = safe_stats(col)[0]   # min
-
+            st.session_state[key] = safe_stats(col)[0]
 
 st.sidebar.button("Use Sample Data", on_click=load_sample)
 st.sidebar.button("🔄 Reset Form", on_click=reset_form)
@@ -195,17 +190,18 @@ st.sidebar.button("🔄 Reset Form", on_click=reset_form)
 # 7.  Collect data *without* running model
 # ═══════════════════════════════════════
 if uploaded_file:
-    raw_df     = pd.read_csv(uploaded_file)
+    raw_df = pd.read_csv(uploaded_file)
     batch_mode = True
 else:
-    raw_df     = sidebar_inputs()
+    raw_df = sidebar_inputs()
     batch_mode = False
 
 # A button the user must click to trigger prediction
 run_pred = st.sidebar.button("Run Prediction", use_container_width=True)
 
-# Stop here until the user clicks the button
-if not run_pred:
+# Stop early if no prediction or immediately after Clear-History
+if not run_pred or st.session_state["skip_append"]:
+    st.session_state["skip_append"] = False  # reset after skip
     st.stop()
 
 # ═══════════════════════════════════════
@@ -366,9 +362,8 @@ csv_hist = st.session_state["history"].to_csv(index=False).encode()
 st.download_button(
     "💾 Download History", csv_hist, "prediction_history.csv", "text/csv"
 )
+
 if st.button("🗑️ Clear History"):
-    st.session_state["history"] = pd.DataFrame()
-    st.session_state["skip_append"] = True
+    st.session_state["history"] = pd.DataFrame()   # empty
+    st.session_state["skip_append"] = True         # skip next rerun append
     st.rerun()
-else:
-    st.session_state["skip_append"] = False
