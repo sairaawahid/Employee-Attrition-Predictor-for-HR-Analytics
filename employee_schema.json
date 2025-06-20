@@ -2,7 +2,8 @@
     "Age": {
         "dtype": "int64",
         "min": 18,
-        "max": 60
+        "max": 60,
+        "discrete": true
     },
     "Attrition": {
         "dtype": "object",
@@ -40,7 +41,7 @@
             "Supply Chain",
             "Other"
         ]
-  },
+    },
     "Distance From Home": {
         "dtype": "int64",
         "min": 1,
@@ -78,7 +79,8 @@
     "Environment Satisfaction": {
         "dtype": "int64",
         "min": 1,
-        "max": 4
+        "max": 4,
+        "discrete": true
     },
     "Gender": {
         "dtype": "object",
@@ -98,12 +100,14 @@
     "Job Involvement": {
         "dtype": "int64",
         "min": 1,
-        "max": 4
+        "max": 4,
+        "discrete": true
     },
     "Job Level": {
         "dtype": "int64",
         "min": 1,
-        "max": 5
+        "max": 5,
+        "discrete": true
     },
     "Job Role": {
         "dtype": "object",
@@ -128,7 +132,8 @@
     "Job Satisfaction": {
         "dtype": "int64",
         "min": 1,
-        "max": 4
+        "max": 4,
+        "discrete": true
     },
     "Marital Status": {
         "dtype": "object",
@@ -154,7 +159,7 @@
             "15 000 – 19 999",
             "20 000 – 29 999"
         ]
-  },
+    },
     "Monthly Rate": {
      "dtype": "object",
      "options": [
@@ -170,7 +175,8 @@
     "No. of Companies Worked": {
         "dtype": "int64",
         "min": 1,
-        "max": 10
+        "max": 10,
+        "discrete": true
     },
     "Over Time": {
         "dtype": "object",
@@ -189,52 +195,61 @@
     "Performance Rating": {
         "dtype": "int64",
         "min": 1,
-        "max": 4
+        "max": 4,
+        "discrete": true
     },
     "Relationship Satisfaction": {
         "dtype": "int64",
         "min": 1,
-        "max": 4
+        "max": 4,
+        "discrete": true
     },
     "Stock Option Level": {
         "dtype": "int64",
         "min": 0,
         "max": 3,
-        "mean": 0.7938775510204081
+        "discrete": true
     },
     "Total Working Years": {
         "dtype": "int64",
         "min": 0,
         "max": 40,
+        "discrete": true
     },
     "Training Times Last Year": {
         "dtype": "int64",
         "min": 0,
-        "max": 10
+        "max": 10,
+        "discrete": true
     },
     "Work Life Balance": {
         "dtype": "int64",
         "min": 1,
-        "max": 4
+        "max": 4,
+        "discrete": true
     },
     "Years At Company": {
         "dtype": "int64",
         "min": 0,
-        "max": 40
+        "max": 40,
+        "discrete": true
     },
     "Years In Current Role": {
         "dtype": "int64",
         "min": 0,
-        "max": 40
+        "max": 40,
+        "discrete": true
     },
     "Years Since Last Promotion": {
         "dtype": "int64",
         "min": 0,
-        "max": 20
+        "max": 20,
+        "discrete": true
     },
     "Years With Current Manager": {
         "dtype": "int64",
         "min": 0,
-        "max": 20
+        "max": 20,
+        "discrete": true
     }
 }
