@@ -120,8 +120,9 @@ def sidebar_inputs():
                     col, value=curval, key=key, help=tip
                 )
             else:
+                step = 1 if meta.get("discrete", False) else 0.1
                 row[col] = st.sidebar.slider(
-                    col, cmin, cmax, curval, key=key, help=tip
+                    col, cmin, cmax, curval, step=step, key=key, help=tip
                 )
     return pd.DataFrame([row])
 
