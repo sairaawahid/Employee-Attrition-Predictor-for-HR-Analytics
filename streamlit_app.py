@@ -357,9 +357,8 @@ user_df["Prediction"]    = "Yes" if pred else "No"
 user_df["Probability"]   = f"{prob:.1%}"
 user_df["Risk Category"] = risk
 user_df["Timestamp"]     = datetime.now().strftime("%Y-%m-%d %H:%M")
-st.session_state["history"] = pd.concat(
-    [st.session_state["history"], user_df], ignore_index=True
-)
+if "skip_append" not in st.session_state or not st.session_state["skip_append"]:
+    st.session_state["history"] = pd.concat([st.session_state["history"], user_df], ignore_index=True)
 
 st.subheader("Prediction History")
 st.dataframe(st.session_state["history"], use_container_width=True)
@@ -369,4 +368,7 @@ st.download_button(
 )
 if st.button("🗑️ Clear History"):
     st.session_state["history"] = pd.DataFrame()
+    st.session_state["skip_append"] = True
     st.rerun()
+else:
+    st.session_state["skip_append"] = False
