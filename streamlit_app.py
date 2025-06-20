@@ -108,9 +108,7 @@ def sidebar_inputs() -> pd.DataFrame:
             cur = st.session_state.get(key, options[0])
             if cur not in options:
                 cur = options[0]
-            row[col] = st.sidebar.selectbox(col, options,
-                                            index=options.index(cur),
-                                            key=key, help=tip)
+            row[col] = st.sidebar.selectbox(col, options, key=key, help=tip)
         else:
             cmin, cmax, _ = safe_stats(col)
             cur = float(st.session_state.get(key, cmin))
@@ -128,7 +126,8 @@ def sidebar_inputs() -> pd.DataFrame:
             if abs(cmax - cmin) < 1e-9:
                 row[col] = st.sidebar.number_input(col, value=cur, key=key, help=tip)
             else:
-                row[col] = st.sidebar.slider(col, cmin, cmax, cur, step=step, key=key, help=tip)
+                row[col] = st.sidebar.slider(col, cmin, cmax, step=step, key=key, help=tip)
+                
     return pd.DataFrame([row])
 
 
