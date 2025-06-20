@@ -34,19 +34,16 @@ def get_explainer(_model):
 # ═══════════════════════════════════════
 # 2.  Initialise
 # ═══════════════════════════════════════
-
 if "history" not in st.session_state:
     st.session_state["history"] = pd.DataFrame()
-if "skip_append" not in st.session_state:
-    st.session_state["skip_append"] = False
+if "prediction_done" not in st.session_state:
+    st.session_state["prediction_done"] = False
 
 model        = load_model()
 schema_meta  = load_schema()
 tooltips     = load_tooltips()
 explainer    = get_explainer(model)
 
-if "history" not in st.session_state:
-    st.session_state["history"] = pd.DataFrame()
 
 # ═══════════════════════════════════════
 # 3.  Helpers
@@ -85,48 +82,27 @@ with st.expander("**How to use this app**", expanded=False):
 7. **Download or Clear History** to track past predictions and share insights.
         """)
 
-uploaded_file = st.file_uploader("📂 Upload CSV (optional)", type="csv")
-
 # ═══════════════════════════════════════
 # 5.  Sidebar widgets
 # ═══════════════════════════════════════
 st.sidebar.header("📋 Employee Attributes")
 
 def sidebar_inputs() -> pd.DataFrame:
-    """Render widgets; return single-row DataFrame."""
     row = {}
     for col, meta in schema_meta.items():
-        key = f"inp_{col}"
-        tip = tooltips.get(col.split("_")[0], "")
-
-        # ── categorical values──
-        if meta["dtype"] == "object":
-            options = meta.get("options", ["Unknown"])
-            cur = st.session_state.get(key, options[0])
-            if cur not in options:
-                cur = options[0]
-            row[col] = st.sidebar.selectbox(col, options, key=key, help=tip)
-        
-        # ── numeric values──
-        else:
+        key, tip = f"inp_{col}", tooltips.get(col.split("_")[0], "")
+        if meta["dtype"] == "object":                       # dropdown
+            opts = meta["options"]
+            row[col] = st.sidebar.selectbox(col, opts,
+                                            index=opts.index(st.session_state.get(key, opts[0])),
+                                            key=key, help=tip)
+        else:                                               # numeric
             cmin, cmax, _ = safe_stats(col)
-            cur = float(st.session_state.get(key, cmin))
-            # clamp to bounds
-            cur = min(max(cur, cmin), cmax)
-
-            discrete = meta.get("discrete", False)
-            if discrete:
-                # cast everything to float so Streamlit types match
-                cmin, cmax, cur, step = map(float, (int(cmin), int(cmax), int(cur), 1))
-                step = 1.0
-            else:
-                step = 0.1
-
-            if abs(cmax - cmin) < 1e-9:
-                row[col] = st.sidebar.number_input(col, value=cur, key=key, help=tip)
-            else:
-                row[col] = st.sidebar.slider(col, cmin, cmax, step=step, key=key, help=tip)
-                
+            cur  = float(st.session_state.get(key, cmin))
+            cur  = min(max(cur, cmin), cmax)
+            step = 1.0 if meta.get("discrete", False) else 0.1
+            row[col] = st.sidebar.slider(col, cmin, cmax, value=cur, step=step,
+                                         key=key, help=tip)
     return pd.DataFrame([row])
 
 
@@ -167,19 +143,12 @@ sample_employee = {
 }
 
 def load_sample():
-    for col, val in sample_employee.items():
-        if col not in schema_meta:
-            continue
-        if schema_meta[col]["dtype"] != "object":
-            cmin, cmax, _ = safe_stats(col)
-            val = max(min(val, cmax), cmin)
-        st.session_state[f"inp_{col}"] = val
+    for c, v in sample_employee.items():
+        st.session_state[f"inp_{c}"] = v
 
 def reset_form():
-    for col, meta in schema_meta.items():
-        key = f"inp_{col}"
-        if meta["dtype"] == "object":
-            st.session_state[key] = meta.get("options", ["Unknown"])[0]
+    for c, meta in schema_meta.items():
+        st.session_state[f"inp_{c}"] = meta["options"][0] if meta["dtype"] == "object" else safe_stats(c)[0]
         else:
             st.session_state[key] = safe_stats(col)[0]
 
@@ -189,30 +158,23 @@ st.sidebar.button("🔄 Reset Form", on_click=reset_form)
 # ═══════════════════════════════════════
 # 7.  Collect data *without* running model
 # ═══════════════════════════════════════
-if uploaded_file:
-    raw_df = pd.read_csv(uploaded_file)
-    batch_mode = True
+if (file := st.file_uploader("📂 Upload CSV (optional)", type="csv")):
+    raw_df, batch = pd.read_csv(file), True
 else:
-    raw_df = sidebar_inputs()
-    batch_mode = False
+    raw_df, batch = sidebar_inputs(), False
 
-# A button the user must click to trigger prediction
 run_pred = st.sidebar.button("Run Prediction", use_container_width=True)
 
-# Stop early if no prediction or immediately after Clear-History
-if not run_pred or st.session_state["skip_append"]:
-    st.session_state["skip_append"] = False  # reset after skip
+if not run_pred:                          # user hasn't asked yet
     st.stop()
 
 # ═══════════════════════════════════════
 # 8.  Prepare data for model (after click)
 # ═══════════════════════════════════════
-template = {c: (m["options"][0] if m["dtype"] == "object" else 0)
-            for c, m in schema_meta.items()}
-schema_df = pd.DataFrame([template])
-
-X_full = pd.concat([raw_df, schema_df], ignore_index=True)
-X_enc  = pd.get_dummies(X_full).iloc[: len(raw_df)]
+template = {c: (meta["options"][0] if meta["dtype"] == "object" else 0)
+            for c, meta in schema_meta.items()}
+X_full = pd.concat([raw_df, pd.DataFrame([template])], ignore_index=True)
+X_enc  = pd.get_dummies(X_full).iloc[:len(raw_df)]
 X_enc  = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 
 # ═══════════════════════════════════════
@@ -242,8 +204,8 @@ if batch_mode:
         key="row_picker",
     )
     st.dataframe(raw_df, use_container_width=True)
-    X_user  = X_enc.iloc[[sel_row - 1]]
-    user_df = raw_df.iloc[[sel_row - 1]]
+    X_user = X_enc.iloc[[row_sel]]
+    user_df = raw_df.iloc[[row_sel]]
 else:
     X_user  = X_enc.iloc[[0]]
     user_df = raw_df.iloc[[0]]
@@ -346,17 +308,21 @@ shap.bar_plot(np.array([val]), feature_names=[feature], max_display=1, show=Fals
 st.pyplot(fig_bar); plt.clf()
 
 # ═══════════════════════════════════════
-# 12.  History (append & display)
+# 12.  Append to history *once* per click
 # ═══════════════════════════════════════
-uuser_df = user_df.copy()
-user_df["Prediction"]  = "Yes" if pred else "No"
-user_df["Probability"] = f"{prob:.1%}"
-user_df["Risk Category"] = risk
-user_df["Timestamp"]   = datetime.now().strftime("%Y-%m-%d %H:%M")
+if st.session_state["prediction_done"] is False:
+    hd = user_df.copy()
+    hd["Prediction"] = "Yes" if pred else "No"
+    hd["Probability"] = f"{prob:.1%}"
+    hd["Risk Category"] = risk
+    hd["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    st.session_state["history"] = pd.concat([st.session_state["history"], hd],
+                                            ignore_index=True)
+st.session_state["prediction_done"] = True
 
-st.session_state["history"] = pd.concat([st.session_state["history"], user_df],
-                                        ignore_index=True)
-
+# ═══════════════════════════════════════
+# 13.  History display / clear
+# ═══════════════════════════════════════
 st.subheader("Prediction History")
 st.dataframe(st.session_state["history"], use_container_width=True)
 
@@ -365,6 +331,9 @@ st.download_button("💾 Download History", csv_hist, "prediction_history.csv",
                    "text/csv")
 
 if st.button("🗑️ Clear History"):
-    st.session_state["history"] = pd.DataFrame()   # empty
-    st.session_state["skip_append"] = True         # skip next rerun append
+    st.session_state["history"] = pd.DataFrame()
+    st.session_state["prediction_done"] = True   # skip immediate append
     st.rerun()
+else:
+    # allow logging on the *next* click
+    st.session_state["prediction_done"] = False
