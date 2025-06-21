@@ -1,4 +1,5 @@
 import sys
+import io, base64
 import streamlit as st
 
 # ──────────────────────────────────────────────────────────────
@@ -86,6 +87,21 @@ def safe_stats(col: str):
     mean = float(meta.get("mean", (lo + hi) / 2))
     return lo, hi, mean
 
+def show_rounded_fig(fig):
+    """Render *fig* inside a div with rounded-corner border."""
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    img_b64 = base64.b64encode(buf.read()).decode("utf-8")
+    st.markdown(
+        f"<div style='border:2px solid #ddd; "
+        f"border-radius:15px; padding:12px; text-align:center'>"
+        f"<img src='data:image/png;base64,{img_b64}' "
+        f"style='max-width:100%; height:auto;' /></div>",
+        unsafe_allow_html=True
+    )
+    
 # ═══════════════════════════════════════
 # 5 . UI header
 # ═══════════════════════════════════════
@@ -132,7 +148,7 @@ def sidebar_inputs() -> pd.DataFrame:
                                          key=key, help=tip)
     return pd.DataFrame([row])
 
-# --- Sample & Reset buttons ------------------------------------
+# ----- Sample & Reset buttons -----
 
 sample_employee = {
     "Age": 32,
@@ -227,7 +243,6 @@ if batch_mode:
         "Select a row for detailed SHAP analysis."
     )
 
-
     sel_row_lbl = st.selectbox(
         "Select employee row for explanation",
         [str(i) for i in range(1, len(tbl)+1)],
@@ -267,39 +282,39 @@ st.markdown(
 )
 
 st.subheader("🔍 SHAP Explanations")
-
-# Compute SHAP values once
+st.info("These plots show **which features push the prediction higher or lower.** "
+    "▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
 sv = explainer.shap_values(X_user)
 if isinstance(sv, (list, tuple)):
     sv = sv[1]
 
-# ——— 11.1 Beeswarm ————————————————————
+# ----- Beeswarm -----
 st.markdown("### 🌐 Global Impact — Beeswarm")
+st.info("This plot shows which features **had the highest overall impact** "
+        "on the model’s prediction for this employee. Longer bars = stronger effect. "
+        "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
 fig_b, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
-st.markdown("<div style='border:2px solid #ddd;padding:12px;border-radius:15px;'>",
-            unsafe_allow_html=True)
-st.pyplot(fig_b)
-st.markdown("</div>", unsafe_allow_html=True); plt.clf()
+show_rounded_fig(fig_b)
 
-# ——— 11.2 Decision Path —————————————————
+# ----- Decision Path -----
 st.markdown("### 🧭 Decision Path")
+st.info("This plot explains the **sequence of contributions** each feature made, "
+        "starting from the model’s baseline prediction. Features that increased or "
+        "decreased the risk are shown from left to right, helping you follow the model’s logic.")
 fig_d, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
-st.markdown("<div style='border:2px solid #ddd;padding:12px;border-radius:15px;'>",
-            unsafe_allow_html=True)
-st.pyplot(fig_d)
-st.markdown("</div>", unsafe_allow_html=True); plt.clf()
+show_rounded_fig(fig_d)
 
-# ——— 11.3 Local Force (or Waterfall) ——
+# ----- Local Force / Waterfall -----
 st.markdown("### 🎯 Local Force Plot")
+st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
+        "higher (red) vs. lower (blue). It gives an intuitive sense of what tipped the balance "
+        "towards a high or low attrition risk for this specific case.")
 try:
     fig_f = shap.plots.force(explainer.expected_value, sv[0],
                              X_user.iloc[0], matplotlib=True, show=False)
-    st.markdown("<div style='border:2px solid #ddd;padding:12px;border-radius:15px;'>",
-                unsafe_allow_html=True)
-    st.pyplot(fig_f)
-    st.markdown("</div>", unsafe_allow_html=True)
+    show_rounded_fig(fig_f)
 except Exception:
     fig_w, _ = plt.subplots()
     shap.plots.waterfall(
@@ -307,21 +322,18 @@ except Exception:
                          base_values=explainer.expected_value,
                          data=X_user.iloc[0]),
         max_display=15, show=False)
-    st.markdown("<div style='border:2px solid #ddd;padding:12px;border-radius:15px;'>",
-                unsafe_allow_html=True)
-    st.pyplot(fig_w)
-    st.markdown("</div>", unsafe_allow_html=True)
+    show_rounded_fig(fig_w)
 
-# ——— 11.4 Interactive Feature Impact ——
+# ----- Interactive bar -----
 st.markdown("### 🔎 Interactive Feature Impact")
+st.info("Select a feature to see **how much it individually influenced** the prediction. "
+        "This bar shows whether the chosen feature increased or decreased attrition risk "
+        "and by how much in the context of this specific employee.")
 feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
 fig_i, _ = plt.subplots()
 shap.bar_plot(np.array([sv[0][X_user.columns.get_loc(feature)]]),
               feature_names=[feature], max_display=1, show=False)
-st.markdown("<div style='border:2px solid #ddd;padding:12px;border-radius:15px;'>",
-            unsafe_allow_html=True)
-st.pyplot(fig_i)
-st.markdown("</div>", unsafe_allow_html=True); plt.clf()
+show_rounded_fig(fig_i)
 
 # ═══════════════════════════════════════
 # 12 .  Append to history exactly once
