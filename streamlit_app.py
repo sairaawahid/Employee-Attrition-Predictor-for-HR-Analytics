@@ -267,44 +267,32 @@ st.markdown(
 )
 
 st.subheader("🔍 SHAP Explanations")
-st.info(
-    "These plots show **which features push the prediction higher or lower.** "
-    "▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying."
-)
+
+# Compute SHAP values once
 sv = explainer.shap_values(X_user)
-if isinstance(sv, (list, tuple)): sv = sv[1]
+if isinstance(sv, (list, tuple)):
+    sv = sv[1]
 
-
+# ——— 11.1 Beeswarm ————————————————————
 st.markdown("### 🌐 Global Impact — Beeswarm")
-st.info("This plot shows which features **had the highest overall impact** "
-        "on the model’s prediction for this employee. Longer bars = stronger effect. "
-        "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
 fig_b, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.markdown("<div style='border:2px solid #ddd;padding:12px;border-radius:15px;'>",
             unsafe_allow_html=True)
 st.pyplot(fig_b)
-st.markdown("</div>", unsafe_allow_html=True)
-plt.clf()
+st.markdown("</div>", unsafe_allow_html=True); plt.clf()
 
-
+# ——— 11.2 Decision Path —————————————————
 st.markdown("### 🧭 Decision Path")
-st.info("This plot explains the **sequence of contributions** each feature made, "
-        "starting from the model’s baseline prediction. Features that increased or "
-        "decreased the risk are shown from left to right, helping you follow the model’s logic.")
 fig_d, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.markdown("<div style='border:2px solid #ddd;padding:12px;border-radius:15px;'>",
             unsafe_allow_html=True)
 st.pyplot(fig_d)
-st.markdown("</div>", unsafe_allow_html=True)
-plt.clf()
+st.markdown("</div>", unsafe_allow_html=True); plt.clf()
 
-
+# ——— 11.3 Local Force (or Waterfall) ——
 st.markdown("### 🎯 Local Force Plot")
-st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
-        "higher (red) vs. lower (blue). It gives an intuitive sense of what tipped the balance "
-        "towards a high or low attrition risk for this specific case.")
 try:
     fig_f = shap.plots.force(explainer.expected_value, sv[0],
                              X_user.iloc[0], matplotlib=True, show=False)
@@ -324,11 +312,8 @@ except Exception:
     st.pyplot(fig_w)
     st.markdown("</div>", unsafe_allow_html=True)
 
-
+# ——— 11.4 Interactive Feature Impact ——
 st.markdown("### 🔎 Interactive Feature Impact")
-st.info("Select a feature to see **how much it individually influenced** the prediction. "
-        "This bar shows whether the chosen feature increased or decreased attrition risk "
-        "and by how much in the context of this specific employee.")
 feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
 fig_i, _ = plt.subplots()
 shap.bar_plot(np.array([sv[0][X_user.columns.get_loc(feature)]]),
@@ -336,8 +321,7 @@ shap.bar_plot(np.array([sv[0][X_user.columns.get_loc(feature)]]),
 st.markdown("<div style='border:2px solid #ddd;padding:12px;border-radius:15px;'>",
             unsafe_allow_html=True)
 st.pyplot(fig_i)
-st.markdown("</div>", unsafe_allow_html=True)
-plt.clf()
+st.markdown("</div>", unsafe_allow_html=True); plt.clf()
 
 # ═══════════════════════════════════════
 # 12 .  Append to history exactly once
