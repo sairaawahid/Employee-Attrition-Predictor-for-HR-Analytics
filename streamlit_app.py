@@ -278,10 +278,14 @@ st.markdown("### 🌐 Global Impact — Beeswarm")
 st.info("This plot shows which features **had the highest overall impact** "
         "on the model’s prediction for this employee. Longer bars = stronger effect. "
         "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
-
+st.markdown(
+    "<div style='border:1px solid #ccc; border-radius:12px; padding:12px;'>",
+    unsafe_allow_html=True
+)
 fig_b, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_b); plt.clf()
+st.markdown("</div>", unsafe_allow_html=True)
 
 
 st.markdown("### 🧭 Decision Path")
