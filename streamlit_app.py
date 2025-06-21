@@ -21,6 +21,14 @@ except Exception:
 st.set_page_config(page_title="Attrition Predictor",
                    initial_sidebar_state="expanded")
 
+# --------- Streamlit version-agnostic rerun helper ----------
+def _safe_rerun():
+    """Call st.rerun() on new Streamlit, or experimental_rerun() on <1.25."""
+    if hasattr(st, "rerun"):
+        st.rerun()
+    else:
+        st.experimental_rerun()
+        
 # ═════════════════════════════════════════════════════════════
 # 1 ▸  Cached resources
 # ═════════════════════════════════════════════════════════════
@@ -300,5 +308,5 @@ if st.button("🗑️ Clear History", key="clear_history"):
     ss.just_cleared  = True
     ss.predicted     = False
     ss.append_pending = False
-    st.experimental_rerun()
+    _safe_rerun()
 
