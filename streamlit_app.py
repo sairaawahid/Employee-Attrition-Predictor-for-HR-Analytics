@@ -171,7 +171,7 @@ def reset_form():
     for c, m in schema_meta.items():
         ss[f"inp_{c}"] = m["options"][0] if m["dtype"] == "object" else safe_stats(c)[0]
 
-st.sidebar.button("🧭 Use Sample Data", on_click=load_sample)
+st.sidebar.button("Use Sample Data", on_click=load_sample)
 st.sidebar.button("🔄 Reset Form",    on_click=reset_form)
 
 # ═══════════════════════════════════════
@@ -234,7 +234,7 @@ risk = label_risk(prob)
 # ═══════════════════════════════════════
 # 11 .  Results + SHAP (unchanged UI)
 # ═══════════════════════════════════════
-st.markdown("### 🎯 Prediction Results")
+st.markdown("### Prediction Results")
 st.markdown(
     f"""
 <div style='border:2px solid #eee;border-radius:10px;padding:20px;background:#f9f9f9;'>
@@ -329,7 +329,7 @@ ss.just_cleared   = False
 # ═══════════════════════════════════════
 # 13 .  History display / download / clear
 # ═══════════════════════════════════════
-st.subheader("📜 Prediction History")
+st.subheader("Prediction History")
 st.dataframe(ss.history, use_container_width=True)
 
 csv_hist = ss.history.to_csv(index=False).encode()
