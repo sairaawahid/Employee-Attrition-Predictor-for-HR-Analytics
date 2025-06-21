@@ -25,7 +25,6 @@ except Exception:
 
 # ───────── Streamlit config – keep sidebar open ─────────────
 st.set_page_config(page_title="Attrition Predictor",
-                   layout="wide",
                    initial_sidebar_state="expanded")
 
 # ═══════════════════════════════════════
