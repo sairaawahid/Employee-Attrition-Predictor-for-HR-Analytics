@@ -273,13 +273,19 @@ st.info(
 sv = explainer.shap_values(X_user)
 if isinstance(sv, (list, tuple)): sv = sv[1]
 
+
 st.markdown("### 🌐 Global Impact — Beeswarm")
 st.info("This plot shows which features **had the highest overall impact** "
         "on the model’s prediction for this employee. Longer bars = stronger effect. "
         "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
+st.markdown(
+    "<div style='border:1px solid #ccc; border-radius:12px; padding:12px;'>",
+    unsafe_allow_html=True
+)
 fig_b, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_b); plt.clf()
+
 
 st.markdown("### 🧭 Decision Path")
 st.info("This plot explains the **sequence of contributions** each feature made, "
@@ -288,6 +294,7 @@ st.info("This plot explains the **sequence of contributions** each feature made,
 fig_d, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_d); plt.clf()
+
 
 st.markdown("### 🎯 Local Force Plot")
 st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
@@ -303,6 +310,7 @@ except Exception:
         shap.Explanation(values=sv[0], base_values=explainer.expected_value,
                          data=X_user.iloc[0]), max_display=15, show=False)
     st.pyplot(fig_w)
+
 
 st.markdown("### 🔎 Interactive Feature Impact")
 st.info("Select a feature to see **how much it individually influenced** the prediction. "
