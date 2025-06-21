@@ -184,13 +184,7 @@ raw_df       = pd.read_csv(uploaded) if batch_mode else sidebar_inputs()
 # ═══════════════════════════════════════
 # 8 .  Run Prediction control
 # ═══════════════════════════════════════
-run_col1, run_col2 = st.sidebar.columns([1, 6])
-with run_col1:
-    st.image("run_icon.png", width=28)
-with run_col2:
-    run_clicked = st.button("Run Prediction", key="run_predict")
-
-if run_clicked:
+if st.sidebar.button("▶️ Run Prediction"):
     ss.predicted      = True
     ss.append_pending = True
 
