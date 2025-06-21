@@ -234,7 +234,7 @@ if batch_mode:
     st.dataframe(tbl, use_container_width=True)
 
     sel_row_lbl = st.selectbox(
-        "Select employee row for explanation",
+        "**Select employee row for explanation**",
         [str(i) for i in range(1, len(tbl)+1)],
         index=0, key="row_select"
     )
