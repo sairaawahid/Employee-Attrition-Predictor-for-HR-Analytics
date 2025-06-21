@@ -16,6 +16,11 @@ import json
 from pathlib import Path
 from datetime import datetime
 
+
+# ───────── Streamlit config – keep sidebar open ─────────────
+st.set_page_config(page_title="Attrition Predictor",
+                   initial_sidebar_state="expanded")
+
 # ═══════════════════════════════════════
 # 1 . Cached resources
 # ═══════════════════════════════════════
@@ -225,14 +230,13 @@ st.markdown(
 )
 
 st.subheader("🔍 SHAP Explanations")
+st.info(
+    "These plots show **which features push the prediction higher or lower.** "
+    "▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying."
+)
 sv = explainer.shap_values(X_user)
-if isinstance(sv, (list, tuple)): sv = sv[1]
-st.info(    "These plots show **which features push the prediction higher or lower.** "
-    "▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
-
-fig, _ = plt.subplots()
-shap.summary_plot(sv, X_user, show=False)
-st.pyplot(fig); plt.clf()
+if isinstance(sv, list):
+    sv = sv[1]
 
 st.markdown("### Global Impact — Beeswarm")
 st.info("This plot shows which features **had the highest overall impact** "
