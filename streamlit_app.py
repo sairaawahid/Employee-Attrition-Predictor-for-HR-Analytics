@@ -16,6 +16,18 @@ import json
 from pathlib import Path
 from datetime import datetime
 
+# ----- compat patch for old pickles that reference joblib.Bunch -------------
+try:
+    from sklearn.utils import Bunch               # type: ignore
+    sys.modules["joblib.Bunch"] = Bunch
+except Exception:
+    pass
+
+# ───────── Streamlit config – keep sidebar open ─────────────
+st.set_page_config(page_title="Attrition Predictor",
+                   layout="wide",
+                   initial_sidebar_state="expanded")
+
 # ═══════════════════════════════════════
 # 1 . Cached resources
 # ═══════════════════════════════════════
