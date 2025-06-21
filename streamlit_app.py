@@ -367,6 +367,6 @@ if st.button("🗑️ Clear History", key="clear_history"):
 st.markdown("---")
 st.markdown(
     "📌 **Attribution**\n\n"
-    "This app was developed by Saira in 2025. "
+    "This app was developed by Sairaawahid in 2025. "
     "If you use or adapt this project, please provide proper credit by linking to the [GitHub repository](https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics)."
 )
