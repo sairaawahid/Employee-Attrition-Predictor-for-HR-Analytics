@@ -205,6 +205,16 @@ if st.sidebar.button("Run Prediction"):
     ss.predicted      = True
     ss.append_pending = True
 
+# ═══════════════════════════════════════
+# Attribution Footer
+# ═══════════════════════════════════════
+st.markdown("---")
+st.markdown(
+    "📌 **Attribution**\n\n"
+    "This app was developed by Sairaawahid in 2025. "
+    "If you use or adapt this project, please provide proper credit by linking to the [GitHub repository](https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics)."
+)
+
 if not ss.predicted:             # haven’t run yet – do nothing else
     st.stop()
 
@@ -361,12 +371,4 @@ if st.button("🗑️ Clear History", key="clear_history"):
     ss.append_pending = False
     st.experimental_rerun()
 
-# ═══════════════════════════════════════
-# 14 .  Attribution Footer
-# ═══════════════════════════════════════
-st.markdown("---")
-st.markdown(
-    "📌 **Attribution**\n\n"
-    "This app was developed by Sairaawahid in 2025. "
-    "If you use or adapt this project, please provide proper credit by linking to the [GitHub repository](https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics)."
-)
+
