@@ -51,7 +51,6 @@ defaults = {
     "history"        : pd.DataFrame(),
     "predicted"      : False,   # at least one prediction run in this session
     "append_pending" : False,   # append *once* immediately after Run Prediction
-    # "just_cleared"   : False,   # skip append on rerun after clear
     "load_sample"    : False,
 }
 for k, v in defaults.items():
@@ -359,7 +358,6 @@ st.download_button("💾 Download History", csv_hist,
 # -- Clear History button directly under download -----------------
 if st.button("🗑️ Clear History", key="clear_history"):
     ss.history       = pd.DataFrame()
-    # ss.just_cleared  = True
     ss.predicted     = False
     ss.append_pending = False
     st.experimental_rerun()
