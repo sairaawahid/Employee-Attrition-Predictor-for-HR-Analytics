@@ -128,22 +128,41 @@ def sidebar_inputs() -> pd.DataFrame:
     return pd.DataFrame([row])
 
 # --- Sample & Reset buttons ------------------------------------
+
 sample_employee = {
-    "Age": 32, "Attrition": "No", "Business Travel": "Travel_Rarely",
-    "Daily Rate": 1100, "Department": "Research & Development",
-    "Distance From Home": 8, "Education": "Bachelor's",
-    "Education Field": "Life Sciences", "Environment Satisfaction": 3,
-    "Gender": "Male", "Hourly Rate": 65, "Job Involvement": 3,
-    "Job Level": 2, "Job Role": "Research Scientist", "Job Satisfaction": 2,
-    "Marital Status": "Single", "Monthly Income": "5 000 – 5 999",
-    "Monthly Rate": "10 000 – 14 999", "No. of Companies Worked": 2,
-    "Over Time": "Yes", "Percent Salary Hike": 13, "Performance Rating": 3,
-    "Relationship Satisfaction": 2, "Stock Option Level": 1,
-    "Total Working Years": 10, "Training Times Last Year": 3,
-    "Work Life Balance": 2, "Years At Company": 5,
-    "Years In Current Role": 3, "Years Since Last Promotion": 1,
+    "Age": 32,
+    "Attrition": "No",
+    "Business Travel": "Travel_Rarely",
+    "Daily Rate": 1100,
+    "Department": "Research & Development",
+    "Distance From Home": 8,
+    "Education": "Bachelor's",
+    "Education Field": "Life Sciences",
+    "Environment Satisfaction": 3,
+    "Gender": "Male",
+    "Hourly Rate": 65,
+    "Job Involvement": 3,
+    "Job Level": 2,
+    "Job Role": "Research Scientist",
+    "Job Satisfaction": 2,
+    "Marital Status": "Single",
+    "Monthly Income": "5 000 – 5 999",
+    "Monthly Rate": "10 000 – 14 999",
+    "No. of Companies Worked": 2,
+    "Over Time": "Yes",
+    "Percent Salary Hike": 13,
+    "Performance Rating": 3,
+    "Relationship Satisfaction": 2,
+    "Stock Option Level": 1,
+    "Total Working Years": 10,
+    "Training Times Last Year": 3,
+    "Work Life Balance": 2,
+    "Years At Company": 5,
+    "Years In Current Role": 3,
+    "Years Since Last Promotion": 1,
     "Years With Current Manager": 2,
 }
+
 def load_sample():
     for c, v in sample_employee.items():
         ss[f"inp_{c}"] = v
