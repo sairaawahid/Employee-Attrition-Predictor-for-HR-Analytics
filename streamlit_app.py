@@ -1,5 +1,3 @@
-import sys
-import io, base64
 import streamlit as st
 
 # ──────────────────────────────────────────────────────────────
@@ -17,17 +15,6 @@ import matplotlib.pyplot as plt
 import json
 from pathlib import Path
 from datetime import datetime
-
-# ----- compat patch for old pickles that reference joblib.Bunch -------------
-try:
-    from sklearn.utils import Bunch               # type: ignore
-    sys.modules["joblib.Bunch"] = Bunch
-except Exception:
-    pass
-
-# ───────── Streamlit config – keep sidebar open ─────────────
-st.set_page_config(page_title="Attrition Predictor",
-                   initial_sidebar_state="expanded")
 
 # ═══════════════════════════════════════
 # 1 . Cached resources
@@ -87,28 +74,14 @@ def safe_stats(col: str):
     mean = float(meta.get("mean", (lo + hi) / 2))
     return lo, hi, mean
 
-def show_rounded_fig(fig):
-    """Render *fig* inside a div with rounded-corner border."""
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
-    plt.close(fig)
-    buf.seek(0)
-    img_b64 = base64.b64encode(buf.read()).decode("utf-8")
-    st.markdown(
-        f"<div style='border:2px solid #ddd; "
-        f"border-radius:15px; padding:12px; text-align:center'>"
-        f"<img src='data:image/png;base64,{img_b64}' "
-        f"style='max-width:100%; height:auto;' /></div>",
-        unsafe_allow_html=True
-    )
-    
 # ═══════════════════════════════════════
 # 5 . UI header
 # ═══════════════════════════════════════
 st.title("Employee Attrition Predictor")
 st.markdown(
-    "A decision-support tool for HR professionals to predict employee attrition and understand the key reasons behind the prediction. "
-    "Get clear insights with probability scores, risk levels, and SHAP-powered visual explanations for informed talent management."
+    "A decision-support tool for HR pros to predict attrition and "
+    "understand the drivers via **SHAP**. Get clear probability, risk tier, "
+    "and feature insights for single employees or bulk CSV uploads."
 )
 with st.expander("**How to use this app**", expanded=False):
     st.markdown(
@@ -120,7 +93,8 @@ with st.expander("**How to use this app**", expanded=False):
 5. Explore **SHAP plots** to understand which factors drive each prediction.  
 6. Use the **Interactive Feature Impact** to inspect any feature.  
 7. **Download or Clear History** to track past predictions and share insights.
-        """)
+        """
+    )
 
 # ═══════════════════════════════════════
 # 6 . Sidebar – inputs
@@ -148,41 +122,23 @@ def sidebar_inputs() -> pd.DataFrame:
                                          key=key, help=tip)
     return pd.DataFrame([row])
 
-# ----- Sample & Reset buttons -----
-
+# --- Sample & Reset buttons ------------------------------------
 sample_employee = {
-    "Age": 32,
-    "Attrition": "No",
-    "Business Travel": "Travel_Rarely",
-    "Daily Rate": 1100,
-    "Department": "Research & Development",
-    "Distance From Home": 8,
-    "Education": "Bachelor's",
-    "Education Field": "Life Sciences",
-    "Environment Satisfaction": 3,
-    "Gender": "Male",
-    "Hourly Rate": 65,
-    "Job Involvement": 3,
-    "Job Level": 2,
-    "Job Role": "Research Scientist",
-    "Job Satisfaction": 2,
-    "Marital Status": "Single",
-    "Monthly Income": "5 000 – 5 999",
-    "No. of Companies Worked": 2,
-    "Over Time": "Yes",
-    "Percent Salary Hike": 13,
-    "Performance Rating": 3,
-    "Relationship Satisfaction": 2,
-    "Stock Option Level": 1,
-    "Total Working Years": 10,
-    "Training Times Last Year": 3,
-    "Work Life Balance": 2,
-    "Years At Company": 5,
-    "Years In Current Role": 3,
-    "Years Since Last Promotion": 1,
+    "Age": 32, "Attrition": "No", "Business Travel": "Travel_Rarely",
+    "Daily Rate": 1100, "Department": "Research & Development",
+    "Distance From Home": 8, "Education": "Bachelor's",
+    "Education Field": "Life Sciences", "Environment Satisfaction": 3,
+    "Gender": "Male", "Hourly Rate": 65, "Job Involvement": 3,
+    "Job Level": 2, "Job Role": "Research Scientist", "Job Satisfaction": 2,
+    "Marital Status": "Single", "Monthly Income": "5 000 – 5 999",
+    "Monthly Rate": "10 000 – 14 999", "No. of Companies Worked": 2,
+    "Over Time": "Yes", "Percent Salary Hike": 13, "Performance Rating": 3,
+    "Relationship Satisfaction": 2, "Stock Option Level": 1,
+    "Total Working Years": 10, "Training Times Last Year": 3,
+    "Work Life Balance": 2, "Years At Company": 5,
+    "Years In Current Role": 3, "Years Since Last Promotion": 1,
     "Years With Current Manager": 2,
 }
-
 def load_sample():
     for c, v in sample_employee.items():
         ss[f"inp_{c}"] = v
@@ -235,13 +191,6 @@ if batch_mode:
 
     st.subheader("📑 Batch Prediction Summary")
     st.dataframe(tbl, use_container_width=True)
-    st.info(
-        "This table summarizes attrition predictions for all uploaded employees. "
-        "Each row shows whether the employee is predicted to leave (Yes/No), "
-        "the exact probability, and the assigned risk category: "
-        "**Low (<30%)**, **Moderate (30–60%)**, or **High (>60%)**. "
-        "Select a row for detailed SHAP analysis."
-    )
 
     sel_row_lbl = st.selectbox(
         "Select employee row for explanation",
@@ -262,12 +211,6 @@ risk = label_risk(prob)
 # 11 .  Results + SHAP (unchanged UI)
 # ═══════════════════════════════════════
 st.markdown("### 🎯 Prediction Results")
-st.info(
-    "Below you’ll see whether the employee is likely to leave the company (Yes/No), "
-    "the exact probability, and the calibrated risk category."
-    "**Low (<30%)**, **Moderate (30–60%)**, or **High (>60%)**."
-)
-# Styled box container
 st.markdown(
     f"""
 <div style='border:2px solid #eee;border-radius:10px;padding:20px;background:#f9f9f9;'>
@@ -282,58 +225,69 @@ st.markdown(
 )
 
 st.subheader("🔍 SHAP Explanations")
-st.info("These plots show **which features push the prediction higher or lower.** "
-    "▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
 sv = explainer.shap_values(X_user)
-if isinstance(sv, (list, tuple)):
-    sv = sv[1]
+if isinstance(sv, (list, tuple)): sv = sv[1]
+st.info(    "These plots show **which features push the prediction higher or lower.** "
+    "▲ Positive SHAP pushes toward leaving; ▼ Negative pushes toward staying.")
 
-# ----- Beeswarm -----
-st.markdown("### 🌐 Global Impact — Beeswarm")
+fig, _ = plt.subplots()
+shap.summary_plot(sv, X_user, show=False)
+st.pyplot(fig); plt.clf()
+
+st.markdown("### Global Impact — Beeswarm")
 st.info("This plot shows which features **had the highest overall impact** "
         "on the model’s prediction for this employee. Longer bars = stronger effect. "
         "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
-fig_b, _ = plt.subplots()
+fig_bsw, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
-show_rounded_fig(fig_b)
+st.pyplot(fig_bsw); plt.clf()
 
-# ----- Decision Path -----
-st.markdown("### 🧭 Decision Path")
+st.markdown("### Decision Path")
 st.info("This plot explains the **sequence of contributions** each feature made, "
         "starting from the model’s baseline prediction. Features that increased or "
         "decreased the risk are shown from left to right, helping you follow the model’s logic.")
-fig_d, _ = plt.subplots()
+fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
-show_rounded_fig(fig_d)
+st.pyplot(fig_dec); plt.clf()
 
-# ----- Local Force / Waterfall -----
-st.markdown("### 🎯 Local Force Plot")
+st.markdown("### Local Force Plot")
 st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
         "higher (red) vs. lower (blue). It gives an intuitive sense of what tipped the balance "
         "towards a high or low attrition risk for this specific case.")
 try:
-    fig_f = shap.plots.force(explainer.expected_value, sv[0],
-                             X_user.iloc[0], matplotlib=True, show=False)
-    show_rounded_fig(fig_f)
+    fig_f = shap.plots.force(
+        explainer.expected_value,
+        sv[0],
+        X_user.iloc[0],
+        matplotlib=True,
+        show=False,
+    )
+    st.pyplot(fig_f)
 except Exception:
-    fig_w, _ = plt.subplots()
+    st.info("Force plot unavailable – showing waterfall instead.")
+    fig_f, _ = plt.subplots()
     shap.plots.waterfall(
-        shap.Explanation(values=sv[0],
-                         base_values=explainer.expected_value,
-                         data=X_user.iloc[0]),
-        max_display=15, show=False)
-    show_rounded_fig(fig_w)
+        shap.Explanation(
+            values=sv[0],
+            base_values=explainer.expected_value,
+            data=X_user.iloc[0],
+        ),
+        max_display=15,
+        show=False,
+    )
+    st.pyplot(fig_f)
 
-# ----- Interactive bar -----
-st.markdown("### 🔎 Interactive Feature Impact")
+st.markdown("### Interactive Feature Impact")
 st.info("Select a feature to see **how much it individually influenced** the prediction. "
         "This bar shows whether the chosen feature increased or decreased attrition risk "
         "and by how much in the context of this specific employee.")
 feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
-fig_i, _ = plt.subplots()
-shap.bar_plot(np.array([sv[0][X_user.columns.get_loc(feature)]]),
-              feature_names=[feature], max_display=1, show=False)
-show_rounded_fig(fig_i)
+idx = X_user.columns.get_loc(feature)
+val = sv[0][idx] if sv.ndim == 2 else sv[idx]
+fig_bar, _ = plt.subplots()
+shap.bar_plot(np.array([val]), feature_names=[feature], max_display=1, show=False)
+st.pyplot(fig_bar); plt.clf()
+
 
 # ═══════════════════════════════════════
 # 12 .  Append to history exactly once
