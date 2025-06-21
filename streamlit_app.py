@@ -201,11 +201,11 @@ raw_df       = pd.read_csv(uploaded) if batch_mode else sidebar_inputs()
 # ═══════════════════════════════════════
 # 8 .  Run Prediction control
 # ═══════════════════════════════════════
-if st.sidebar.button("▶️ Run Prediction"):
+if st.sidebar.button("Run Prediction"):
     ss.predicted      = True
     ss.append_pending = True
 
-if not ss.predicted:                 # haven’t run yet – do nothing else
+if not ss.predicted:             # haven’t run yet – do nothing else
     st.stop()
 
 # ═══════════════════════════════════════
@@ -360,3 +360,13 @@ if st.button("🗑️ Clear History", key="clear_history"):
     ss.predicted     = False
     ss.append_pending = False
     st.experimental_rerun()
+
+# ═══════════════════════════════════════
+# 14 .  Attribution Footer
+# ═══════════════════════════════════════
+st.markdown("---")
+st.markdown(
+    "📌 **Attribution**\n\n"
+    "This app was developed by Saira in 2025. "
+    "If you use or adapt this project, please provide proper credit by linking to the [GitHub repository](https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics)."
+)
