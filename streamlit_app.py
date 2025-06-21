@@ -7,15 +7,15 @@ import matplotlib.pyplot as plt
 import json
 from pathlib import Path
 from datetime import datetime
-"""
+
 # -- patch for legacy models saved with joblib.Bunch ---------------
-try:
-    from sklearn.utils import Bunch                    # type: ignore
-    sys.modules["joblib.Bunch"] = Bunch
-except Exception:
-    pass
+# try:
+#     from sklearn.utils import Bunch                    # type: ignore
+#     sys.modules["joblib.Bunch"] = Bunch
+# except Exception:
+#     pass
 # -----------------------------------------------------------------
-"""
+
 
 st.set_page_config(
     page_title="Attrition Predictor",
