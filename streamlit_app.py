@@ -52,6 +52,7 @@ defaults = {
     "predicted"      : False,   # at least one prediction run in this session
     "append_pending" : False,   # append *once* immediately after Run Prediction
     "just_cleared"   : False,   # skip append on rerun after clear
+    "load_sample"    : False,
 }
 for k, v in defaults.items():
     ss.setdefault(k, v)
@@ -177,17 +178,19 @@ def _complete_sample_dict():
             full[col] = safe_stats(col)[0]
     return full
     
-# ----- Use the helper inside load_sample -----
 def load_sample():
     for col, val in _complete_sample_dict().items():
         ss[f"inp_{col}"] = val
-    st.experimental_rerun()         # optional: forces UI refresh right away
+    ss["load_sample"] = True
 
 def reset_form():
     for c, m in schema_meta.items():
         ss[f"inp_{c}"] = m["options"][0] if m["dtype"] == "object" else safe_stats(c)[0]
 
 st.sidebar.button("Use Sample Data", on_click=load_sample)
+if ss.load_sample:
+    ss.load_sample = False       # reset it
+    st.experimental_rerun()      # safe rerun outside callback
 st.sidebar.button("🔄 Reset Form",    on_click=reset_form)
 
 # ═══════════════════════════════════════
