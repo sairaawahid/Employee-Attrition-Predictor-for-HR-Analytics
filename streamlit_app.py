@@ -97,7 +97,6 @@ st.sidebar.header("📋 Employee Attributes")
 
 
 def sidebar_inputs() -> pd.DataFrame:
-    """Render widgets; return single-row DataFrame."""
     row = {}
     for col, meta in schema_meta.items():
         key = f"inp_{col}"
