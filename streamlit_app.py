@@ -163,9 +163,25 @@ sample_employee = {
     "Years With Current Manager": 2,
 }
 
+# ----- Helper: make sample dict complete -----
+def _complete_sample_dict():
+    """Return a dict that has *every* column in the schema.
+       Any missing key gets the schema default."""
+    full = {}
+    for col, meta in schema_meta.items():
+        if col in sample_employee:                 # value you provided
+            full[col] = sample_employee[col]
+        elif meta["dtype"] == "object":            # default dropdown
+            full[col] = meta["options"][0]
+        else:                                      # default numeric = min
+            full[col] = safe_stats(col)[0]
+    return full
+    
+# ----- Use the helper inside load_sample -----
 def load_sample():
-    for c, v in sample_employee.items():
-        ss[f"inp_{c}"] = v
+    for col, val in _complete_sample_dict().items():
+        ss[f"inp_{col}"] = val
+    st.experimental_rerun()         # optional: forces UI refresh right away
 
 def reset_form():
     for c, m in schema_meta.items():
@@ -257,7 +273,7 @@ sv = explainer.shap_values(X_user)
 if isinstance(sv, list):
     sv = sv[1]
 
-st.markdown("### Global Impact — Beeswarm")
+st.markdown("### 1. Global Impact — Beeswarm")
 st.info("This plot shows which features **had the highest overall impact** "
         "on the model’s prediction for this employee. Longer bars = stronger effect. "
         "Colors indicate whether the value pushed the prediction higher (red) or lower (blue).")
@@ -265,7 +281,7 @@ fig_bsw, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_bsw); plt.clf()
 
-st.markdown("### Decision Path")
+st.markdown("### 2. Decision Path")
 st.info("This plot explains the **sequence of contributions** each feature made, "
         "starting from the model’s baseline prediction. Features that increased or "
         "decreased the risk are shown from left to right, helping you follow the model’s logic.")
@@ -273,7 +289,7 @@ fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
 
-st.markdown("### Local Force Plot")
+st.markdown("### 3. Local Force Plot")
 st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
         "higher (red) vs. lower (blue). It gives an intuitive sense of what tipped the balance "
         "towards a high or low attrition risk for this specific case.")
@@ -300,7 +316,7 @@ except Exception:
     )
     st.pyplot(fig_f)
 
-st.markdown("### Interactive Feature Impact")
+st.markdown("### 4. Interactive Feature Impact")
 st.info("Select a feature to see **how much it individually influenced** the prediction. "
         "This bar shows whether the chosen feature increased or decreased attrition risk "
         "and by how much in the context of this specific employee.")
@@ -329,7 +345,7 @@ ss.just_cleared   = False
 # ═══════════════════════════════════════
 # 13 .  History display / download / clear
 # ═══════════════════════════════════════
-st.subheader("Prediction History")
+st.subheader("📜 Prediction History")
 st.dataframe(ss.history, use_container_width=True)
 
 csv_hist = ss.history.to_csv(index=False).encode()
