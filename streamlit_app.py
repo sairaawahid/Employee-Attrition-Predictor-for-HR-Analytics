@@ -238,39 +238,39 @@ X_full = pd.concat([raw_df, pd.DataFrame([template])], ignore_index=True)
 X_enc  = pd.get_dummies(X_full).iloc[:len(raw_df)]
 X_enc  = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 
-# ── Helper: map every original feature to the encoded column(s) ──────────
-import re
-
+# ═══════════════════════════════════════
+# 9-B.  Build feature_groups  **(FIXED)**
+# ═══════════════════════════════════════
 def canon(name: str) -> str:
-    """Keep only letters & digits, lower-case (stable for matching)."""
+    """letters+digits only, lower-case"""
     return re.sub(r"[^A-Za-z0-9]+", "", name).lower()
 
-# a) canonical lookup → encoded column
-canon2enc: dict[str, str] = {canon(col): col for col in X_enc.columns}
+# -- alias table for names that were shortened during model-training
+ALIASES = {
+    "No. of Companies Worked": "NumCompaniesWorked",
+    "Years With Current Manager": "YearsWithCurrManager",
+}
 
-# b) build feature_groups  {schema_feature → list[encoded cols]}
+canon2enc = {canon(col): col for col in X_enc.columns}
+
 feature_groups: dict[str, list[str]] = {}
-
 for feat, meta in schema_meta.items():
 
-    # Skip the label column – model output, not input
-    if feat.lower() == "attrition":
+    if feat.lower() == "attrition":       # skip label
         continue
 
-    cfeat = canon(feat)
+    feat_match = ALIASES.get(feat, feat)  # use alias if present
+    cfeat = canon(feat_match)
 
-    if meta["dtype"] == "object":              # several one-hot dummies
-        cols = [
-            enc                                   # original encoded col-name
-            for ck, enc in canon2enc.items()
-            if ck.startswith(f"{cfeat}")          # canonical prefix match
-        ]
-    else:                                       # single numeric column
+    if meta["dtype"] == "object":
+        cols = [enc for ck, enc in canon2enc.items() if ck.startswith(cfeat)]
+    else:
         cols = [canon2enc[cfeat]] if cfeat in canon2enc else []
 
-    if cols:                                    # keep only if we found any
+    if cols:
         feature_groups[feat] = cols
-
+        
+# -------------- model inference -------------------------------
 preds  = model.predict(X_enc)
 probs  = model.predict_proba(X_enc)[:, 1]
 
