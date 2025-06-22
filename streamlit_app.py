@@ -189,7 +189,7 @@ st.sidebar.button("Use Sample Data", on_click=load_sample)
 if ss.load_sample:
     ss.load_sample = False       # reset it
     st.experimental_rerun()      # safe rerun outside callback
-st.sidebar.button("⟳ Reset Form",    on_click=reset_form)
+st.sidebar.button("🗘 Reset Form",    on_click=reset_form)
 
 # ═══════════════════════════════════════
 # 7 .  Data intake
