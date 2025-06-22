@@ -227,7 +227,22 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-if not ss.predicted:             # haven’t run yet – do nothing else
+# ═══════════════════════════════════════
+# Attribution Footer (shown when app first opens)
+# ═══════════════════════════════════════
+if not ss.predicted:
+    st.markdown("---", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style='font-size: 12px; color: #6c757d; text-align: center; padding-top: 12px;'>
+            <strong>© 2025 Sairaawahid. All rights reserved.</strong><br>
+            If you use or adapt this project, please give credit by linking to the 
+            <a href="https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics" target="_blank">
+            GitHub repository</a>.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.stop()
 
 # ═══════════════════════════════════════
@@ -384,17 +399,18 @@ if st.button("🗑️ Clear History", key="clear_history"):
     st.experimental_rerun()
 
 # ═══════════════════════════════════════
-# 14 . Attribution Footer (Always at End)
+# 14 . Attribution Footer (after full content)
 # ═══════════════════════════════════════
-st.markdown("---", unsafe_allow_html=True)
-st.markdown(
-    """
-    <div style='font-size: 12px; color: #6c757d; text-align: center; padding-top: 12px;'>
-        <strong>© 2025 Sairaawahid. All rights reserved.</strong><br>
-        If you use or adapt this project, please give credit by linking to the 
-        <a href="https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics" target="_blank">
-        GitHub repository</a>.
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+if ss.predicted:
+    st.markdown("---", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style='font-size: 12px; color: #6c757d; text-align: center; padding-top: 12px;'>
+            <strong>© 2025 Sairaawahid. All rights reserved.</strong><br>
+            If you use or adapt this project, please give credit by linking to the 
+            <a href="https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics" target="_blank">
+            GitHub repository</a>.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
