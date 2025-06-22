@@ -241,35 +241,36 @@ X_enc  = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 # ── Helper: map every original feature to the encoded column(s) ──────────
 import re
 
-def canonical(name: str) -> str:
+def canon(name: str) -> str:
     """
-    Convert any column or feature name to a safe canonical form:
-      • Replace every non-alphanumeric char with “_”
-      • Collapse multiple underscores
-      • Strip leading / trailing underscores
+    Strict canonical form used for matching:
+      • keep only letters & digits
+      • down-case
+    Examples:
+      "Distance From Home"  → distancefromhome
+      "DistanceFromHome"    → distancefromhome
+      "Business Travel_Travel_Rarely" → businesstraveltravelrarely
     """
-    name = re.sub(r"\W+", "_", name)
-    name = re.sub(r"_+", "_", name)
-    return name.strip("_")
+    return re.sub(r"[^A-Za-z0-9]+", "", name).lower()
 
-# --- a.  Build a lookup for encoded columns ---------------------------------
-canon2enc: dict[str, str] = {canonical(col): col for col in X_enc.columns}
+# --- a.  Build lookup for every encoded column -----------------------------
+canon2enc: dict[str, str] = {canon(col): col for col in X_enc.columns}
 
-# --- b.  Build feature_groups  ---------------------------------------------
+# --- b.  Build feature_groups ----------------------------------------------
 feature_groups: dict[str, list[str]] = {}
 
 for feat, meta in schema_meta.items():
-    cfeat = canonical(feat)
+    cfeat = canon(feat)
 
-    if meta["dtype"] == "object":                      # → many one-hot dummies
+    if meta["dtype"] == "object":               # → many one-hot dummies
         cols = [
-            col for col in X_enc.columns
-            if canonical(col).startswith(f"{cfeat}_")  # canonical match!
+            enc for c, enc in canon2enc.items()
+            if c.startswith(f"{cfeat}")         # canonical prefix match
         ]
-    else:                                              # → single numeric column
+    else:                                       # → single numeric column
         cols = [canon2enc[cfeat]] if cfeat in canon2enc else []
 
-    if cols:                                           # keep only if we found any
+    if cols:                                    # keep only if any found
         feature_groups[feat] = cols
 
 preds  = model.predict(X_enc)
