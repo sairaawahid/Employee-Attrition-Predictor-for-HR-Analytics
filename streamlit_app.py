@@ -238,13 +238,34 @@ X_full = pd.concat([raw_df, pd.DataFrame([template])], ignore_index=True)
 X_enc  = pd.get_dummies(X_full).iloc[:len(raw_df)]
 X_enc  = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 
-feature_groups = {}
+# ── Helper: map every original feature to the encoded column(s) ──────────
+import re
+
+def canonical(name: str) -> str:
+    """
+    Make a column-name safe version identical to what pandas / XGBoost keep.
+    • Replace every non-alphanumeric char with “_”
+    • Collapse multiple underscores
+    • Strip leading / trailing underscores
+    """
+    name = re.sub(r"\W+", "_", name)
+    name = re.sub(r"_+", "_", name)
+    return name.strip("_")
+
+feature_groups: dict[str, list[str]] = {}
+
+# Inverse lookup: {canonical_col_name → actual_col_name}
+canon2real = {canonical(c): c for c in X_enc.columns}
+
 for feat, meta in schema_meta.items():
-    if meta["dtype"] == "object":                       # categorical → many dummies
-        cols = [c for c in X_enc.columns
-                 if c.startswith(feat + "_")]           # e.g. Department_Sales, …
-    else:                                               # numeric → single col
-        cols = [feat]
+    cfeat = canonical(feat)
+
+    if meta["dtype"] == "object":                       # many dummies
+        cols = [col for col in X_enc.columns
+                if col.startswith(f"{cfeat}_")]
+    else:                                               # single numeric
+        cols = [canon2real[cfeat]] if cfeat in canon2real else []
+
     if cols:                                            # only keep if present
         feature_groups[feat] = cols
 
@@ -369,6 +390,10 @@ col_idx = [X_user.columns.get_loc(c) for c in cols]
 raw_vals = sv[0][col_idx] if sv.ndim == 2 else sv[col_idx]
 agg_val  = float(np.sum(raw_vals))          # make sure it’s a scalar
 
+if not cols:                # safety-net: shouldn’t normally happen
+    st.warning("No SHAP values found for this feature.")
+    st.stop()
+    
 # --- 4-c. Display the bar ------------------------------------------------
 fig_bar, _ = plt.subplots()
 shap.bar_plot(
