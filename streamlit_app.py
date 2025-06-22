@@ -238,6 +238,16 @@ X_full = pd.concat([raw_df, pd.DataFrame([template])], ignore_index=True)
 X_enc  = pd.get_dummies(X_full).iloc[:len(raw_df)]
 X_enc  = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 
+feature_groups = {}
+for feat, meta in schema_meta.items():
+    if meta["dtype"] == "object":                       # categorical → many dummies
+        cols = [c for c in X_enc.columns
+                 if c.startswith(feat + "_")]           # e.g. Department_Sales, …
+    else:                                               # numeric → single col
+        cols = [feat]
+    if cols:                                            # only keep if present
+        feature_groups[feat] = cols
+
 preds  = model.predict(X_enc)
 probs  = model.predict_proba(X_enc)[:, 1]
 
@@ -295,6 +305,7 @@ sv = explainer.shap_values(X_user)
 if isinstance(sv, list):
     sv = sv[1]
 
+
 st.markdown("### 1. Global Impact — Beeswarm")
 st.info("This plot shows which features **had the highest overall impact** "
         "on the model’s prediction for this employee. Longer bars = stronger effect. "
@@ -303,6 +314,7 @@ fig_bsw, _ = plt.subplots()
 shap.summary_plot(sv, X_user, show=False)
 st.pyplot(fig_bsw); plt.clf()
 
+
 st.markdown("### 2. Decision Path")
 st.info("This plot explains the **sequence of contributions** each feature made, "
         "starting from the model’s baseline prediction. Features that increased or "
@@ -310,6 +322,7 @@ st.info("This plot explains the **sequence of contributions** each feature made,
 fig_dec, _ = plt.subplots()
 shap.decision_plot(explainer.expected_value, sv[0], X_user, show=False)
 st.pyplot(fig_dec); plt.clf()
+
 
 st.markdown("### 3. Local Force Plot")
 st.info("This plot provides a **visual tug-of-war**: features pushing the prediction "
@@ -338,17 +351,33 @@ except Exception:
     )
     st.pyplot(fig_f)
 
-st.markdown("### 4. Interactive Feature Impact")
-st.info("Select a feature to see **how much it individually influenced** the prediction. "
-        "This bar shows whether the chosen feature increased or decreased attrition risk "
-        "and by how much in the context of this specific employee.")
-feature = st.selectbox("Choose feature", X_user.columns, key="feat_sel")
-idx = X_user.columns.get_loc(feature)
-val = sv[0][idx] if sv.ndim == 2 else sv[idx]
-fig_bar, _ = plt.subplots()
-shap.bar_plot(np.array([val]), feature_names=[feature], max_display=1, show=False)
-st.pyplot(fig_bar); plt.clf()
 
+st.markdown("### 4. Interactive Feature Impact")
+st.info("Select a feature to see **how much it  influenced** the prediction. ")
+
+# --- 4-a. Drop-down shows original names  -------------------------------
+feature = st.selectbox(
+    "Choose feature",
+    list(feature_groups.keys()),
+    key="feat_sel"
+)
+
+# --- 4-b. Aggregate SHAP values if needed -------------------------------
+cols = feature_groups[feature]
+col_idx = [X_user.columns.get_loc(c) for c in cols]
+# sv may be 1-D or 2-D depending on explainer
+raw_vals = sv[0][col_idx] if sv.ndim == 2 else sv[col_idx]
+agg_val  = float(np.sum(raw_vals))          # make sure it’s a scalar
+
+# --- 4-c. Display the bar ------------------------------------------------
+fig_bar, _ = plt.subplots()
+shap.bar_plot(
+    np.array([agg_val]),
+    feature_names=[feature],
+    max_display=1,
+    show=False
+)
+st.pyplot(fig_bar); plt.clf()
 
 # ═══════════════════════════════════════
 # 12 .  Append to history exactly once
