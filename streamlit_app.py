@@ -242,41 +242,33 @@ X_enc  = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 import re
 
 def canon(name: str) -> str:
-    """letters-and-digits only, lower-case"""
+    """Keep only letters & digits, lower-case (stable for matching)."""
     return re.sub(r"[^A-Za-z0-9]+", "", name).lower()
 
-# --- 0.  Manual aliases for two awkward column names ----------------------
-ALIASES = {
-    "No. of Companies Worked": "NumCompaniesWorked",
-    "Years With Current Manager": "YearsWithCurrManager",
-    # add more here if you discover other mismatches
-}
-
-# --- a.  Canonical lookup for every encoded column ------------------------
+# a) canonical lookup → encoded column
 canon2enc: dict[str, str] = {canon(col): col for col in X_enc.columns}
 
-# --- b.  Build feature_groups --------------------------------------------
+# b) build feature_groups  {schema_feature → list[encoded cols]}
 feature_groups: dict[str, list[str]] = {}
 
 for feat, meta in schema_meta.items():
 
-    # 1) Skip label column – it is not an input feature
+    # Skip the label column – model output, not input
     if feat.lower() == "attrition":
         continue
 
-    # 2) Resolve alias if we have one
-    feat_for_match = ALIASES.get(feat, feat)
-    cfeat = canon(feat_for_match)
+    cfeat = canon(feat)
 
-    if meta["dtype"] == "object":                         # → one-hot dummies
+    if meta["dtype"] == "object":              # several one-hot dummies
         cols = [
-            enc for c, enc in canon2enc.items()
-            if c.startswith(f"{cfeat}")
+            enc                                   # original encoded col-name
+            for ck, enc in canon2enc.items()
+            if ck.startswith(f"{cfeat}")          # canonical prefix match
         ]
-    else:                                                 # → numeric column
+    else:                                       # single numeric column
         cols = [canon2enc[cfeat]] if cfeat in canon2enc else []
 
-    if cols:                                              # keep only if found
+    if cols:                                    # keep only if we found any
         feature_groups[feat] = cols
 
 preds  = model.predict(X_enc)
