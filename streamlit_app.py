@@ -208,11 +208,18 @@ if st.sidebar.button("Run Prediction"):
 # ═══════════════════════════════════════
 # Attribution Footer
 # ═══════════════════════════════════════
-st.markdown("---")
+st.markdown("---", unsafe_allow_html=True)
 st.markdown(
-    "📌 **Attribution**\n\n"
-    "This app was developed by Sairaawahid in 2025. "
-    "If you use or adapt this project, please provide proper credit by linking to the [GitHub repository](https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics)."
+    """
+    <div style='font-size: 12px; color: #6c757d; text-align: center; padding-top: 10px;'>
+        📌 <strong>Attribution</strong><br>
+        This app was developed by <strong>Sairaawahid</strong> in 2025.<br>
+        If you use or adapt this project, please give credit by linking to the 
+        <a href="https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics" target="_blank">
+        GitHub repository</a>.
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
 if not ss.predicted:             # haven’t run yet – do nothing else
