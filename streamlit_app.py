@@ -385,15 +385,18 @@ feature = st.selectbox(
 
 # --- 4-b. Aggregate SHAP values if needed -------------------------------
 cols = feature_groups[feature]
+
+# ⛑️ Graceful fallback for missing SHAP columns
+if not cols:
+    st.warning("No SHAP values found for this feature.")
+    st.stop()
+    
 col_idx = [X_user.columns.get_loc(c) for c in cols]
 # sv may be 1-D or 2-D depending on explainer
 raw_vals = sv[0][col_idx] if sv.ndim == 2 else sv[col_idx]
 agg_val  = float(np.sum(raw_vals))          # make sure it’s a scalar
 
-if not cols:                # safety-net: shouldn’t normally happen
-    st.warning("No SHAP values found for this feature.")
-    st.stop()
-    
+
 # --- 4-c. Display the bar ------------------------------------------------
 fig_bar, _ = plt.subplots()
 shap.bar_plot(
