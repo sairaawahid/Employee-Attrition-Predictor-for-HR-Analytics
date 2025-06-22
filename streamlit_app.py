@@ -383,4 +383,18 @@ if st.button("🗑️ Clear History", key="clear_history"):
     ss.append_pending = False
     st.experimental_rerun()
 
-
+# ═══════════════════════════════════════
+# 14 . Attribution Footer (Always at End)
+# ═══════════════════════════════════════
+st.markdown("---", unsafe_allow_html=True)
+st.markdown(
+    """
+    <div style='font-size: 12px; color: #6c757d; text-align: center; padding-top: 12px;'>
+        <strong>© 2025 Sairaawahid. All rights reserved.</strong><br>
+        If you use or adapt this project, please give credit by linking to the 
+        <a href="https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics" target="_blank">
+        GitHub repository</a>.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
