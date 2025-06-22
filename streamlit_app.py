@@ -212,7 +212,7 @@ st.markdown("---", unsafe_allow_html=True)
 st.markdown(
     """
     <div style='font-size: 12px; color: #6c757d; text-align: center; padding-top: 10px;'>
-        © 2025 <strong>Sairaawahid<strong>. All rights reserved.
+        © 2025 <strong>Sairaawahid<strong>. All rights reserved.<br>
         If you use or adapt this project, please give credit by linking to the 
         <a href="https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics" target="_blank">
         GitHub repository</a>.
