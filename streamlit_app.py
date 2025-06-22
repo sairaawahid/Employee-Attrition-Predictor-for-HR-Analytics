@@ -108,21 +108,27 @@ st.sidebar.header("📋 Employee Attributes")
 def sidebar_inputs() -> pd.DataFrame:
     row = {}
     for col, meta in schema_meta.items():
-        key, tip = f"inp_{col}", tooltips.get(col.split("_")[0], "")
-        if meta["dtype"] == "object":                     # dropdown
-            opts = meta["options"]
-            cur  = ss.get(key, opts[0] if opts else "")
-            row[col] = st.sidebar.selectbox(col, opts,
-                                            index=opts.index(cur),
+        key = f"inp_{col}"
+        tip = tooltips.get(col.split("_")[0], "")
+
+        # --- If value already exists in session_state, use it ---
+        if key in ss:
+            current_value = ss[key]
+        else:
+            # Otherwise set it to default
+            current_value = meta["options"][0] if meta["dtype"] == "object" else safe_stats(col)[0]
+            ss[key] = current_value  # store default in session_state
+
+        # --- Render widgets using session state value ---
+        if meta["dtype"] == "object":  # dropdown
+            row[col] = st.sidebar.selectbox(col, meta["options"],
+                                            index=meta["options"].index(current_value),
                                             key=key, help=tip)
-        else:                                             # numeric
+        else:  # numeric
             lo, hi, _ = safe_stats(col)
-            cur  = float(ss.get(key, lo))
-            cur  = min(max(cur, lo), hi)
             step = 1.0 if meta.get("discrete", False) else 0.1
             row[col] = st.sidebar.slider(col, lo, hi,
-                                         value=cur,
-                                         step=float(step),
+                                         step=step,
                                          key=key, help=tip)
     return pd.DataFrame([row])
 
