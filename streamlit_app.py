@@ -374,7 +374,7 @@ except Exception:
 
 
 st.markdown("### 4. Interactive Feature Impact")
-st.info("Select a feature to see **how much it  influenced** the prediction. ")
+st.info("Select a feature to see **how much it influenced** the prediction. ")
 
 # --- 4-a. Drop-down shows original names  -------------------------------
 feature = st.selectbox(
@@ -384,28 +384,25 @@ feature = st.selectbox(
 )
 
 # --- 4-b. Aggregate SHAP values if needed -------------------------------
-cols = feature_groups[feature]
+cols = feature_groups.get(feature, [])
 
 # ⛑️ Graceful fallback for missing SHAP columns
-if not cols:
-    st.warning("No SHAP values found for this feature.")
-    st.stop()
-    
-col_idx = [X_user.columns.get_loc(c) for c in cols]
-# sv may be 1-D or 2-D depending on explainer
-raw_vals = sv[0][col_idx] if sv.ndim == 2 else sv[col_idx]
-agg_val  = float(np.sum(raw_vals))          # make sure it’s a scalar
+if not cols or not all(col in X_user.columns for col in cols):
+    st.warning("SHAP values unavailable for this feature.")
+else:
+    col_idx = [X_user.columns.get_loc(c) for c in cols]
+    raw_vals = sv[0][col_idx] if sv.ndim == 2 else sv[col_idx]
+    agg_val  = float(np.sum(raw_vals))  # make sure it’s a scalar
 
-
-# --- 4-c. Display the bar ------------------------------------------------
-fig_bar, _ = plt.subplots()
-shap.bar_plot(
-    np.array([agg_val]),
-    feature_names=[feature],
-    max_display=1,
-    show=False
-)
-st.pyplot(fig_bar); plt.clf()
+    # --- 4-c. Display the bar ------------------------------------------------
+    fig_bar, _ = plt.subplots()
+    shap.bar_plot(
+        np.array([agg_val]),
+        feature_names=[feature],
+        max_display=1,
+        show=False
+    )
+    st.pyplot(fig_bar); plt.clf()
 
 # ═══════════════════════════════════════
 # 12 .  Append to history exactly once
