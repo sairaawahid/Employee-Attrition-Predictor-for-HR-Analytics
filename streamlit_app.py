@@ -243,30 +243,33 @@ import re
 
 def canonical(name: str) -> str:
     """
-    Make a column-name safe version identical to what pandas / XGBoost keep.
-    • Replace every non-alphanumeric char with “_”
-    • Collapse multiple underscores
-    • Strip leading / trailing underscores
+    Convert any column or feature name to a safe canonical form:
+      • Replace every non-alphanumeric char with “_”
+      • Collapse multiple underscores
+      • Strip leading / trailing underscores
     """
     name = re.sub(r"\W+", "_", name)
     name = re.sub(r"_+", "_", name)
     return name.strip("_")
 
-feature_groups: dict[str, list[str]] = {}
+# --- a.  Build a lookup for encoded columns ---------------------------------
+canon2enc: dict[str, str] = {canonical(col): col for col in X_enc.columns}
 
-# Inverse lookup: {canonical_col_name → actual_col_name}
-canon2real = {canonical(c): c for c in X_enc.columns}
+# --- b.  Build feature_groups  ---------------------------------------------
+feature_groups: dict[str, list[str]] = {}
 
 for feat, meta in schema_meta.items():
     cfeat = canonical(feat)
 
-    if meta["dtype"] == "object":                       # many dummies
-        cols = [col for col in X_enc.columns
-                if col.startswith(f"{cfeat}_")]
-    else:                                               # single numeric
-        cols = [canon2real[cfeat]] if cfeat in canon2real else []
+    if meta["dtype"] == "object":                      # → many one-hot dummies
+        cols = [
+            col for col in X_enc.columns
+            if canonical(col).startswith(f"{cfeat}_")  # canonical match!
+        ]
+    else:                                              # → single numeric column
+        cols = [canon2enc[cfeat]] if cfeat in canon2enc else []
 
-    if cols:                                            # only keep if present
+    if cols:                                           # keep only if we found any
         feature_groups[feat] = cols
 
 preds  = model.predict(X_enc)
