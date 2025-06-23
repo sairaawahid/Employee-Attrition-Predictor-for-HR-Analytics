@@ -100,7 +100,7 @@ streamlit run streamlit_app.py
 
 ## Outcome
 - Classification model predicting “Attrition: Yes/No”
-- Model interpretability (SHAP/LIME)
+- Model interpretability (SHAP)
 - HR-facing app to simulate predictions
 
 ---
