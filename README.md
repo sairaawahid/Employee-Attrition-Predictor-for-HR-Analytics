@@ -80,7 +80,7 @@ Inputs include dropdowns and sliders based on employee attributes. SHAP visualiz
 ---
 
 ## Installation
-
+```bash
 # 1. Clone the repo
 git clone https://github.com/<your-github-username>/Employee-Attrition-Predictor-for-HR-Analytics.git
 cd Employee-Attrition-Predictor-for-HR-Analytics
@@ -94,7 +94,7 @@ pip install -r requirements.txt
 
 # 4. Launch the app
 streamlit run streamlit_app.py
-```bash
+
 ---
 
 ## Outcome
