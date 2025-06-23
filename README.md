@@ -1,10 +1,7 @@
 # Employee Attrition Predictor  
-*Data-driven HR analytics enhanced with Organizational-Psychology insights*
 
----
-
-## Overview
-“Why do our employees leave?” – This Streamlit web-app gives HR professionals a clear, interpretable answer.  
+## Project Overview
+“Why do our employees leave?” This Streamlit web-app gives HR professionals a clear, interpretable answer.  
 Upload a **single record** or an entire **CSV file** and the model will:
 
 * Predict the probability an employee will quit (`Attrition Yes/No`)
@@ -17,38 +14,103 @@ job satisfaction, engagement, work–life balance and burnout indicators.
 
 ---
 
+## Objectives
+- Predict employee attrition using machine learning techniques.
+- Understand psychological and organizational drivers behind attrition.
+- Offer explainable AI insights to support HR decision-making.
+- Enable both individual predictions and batch analysis.
+- Visualize results using SHAP force plots, beeswarm plots, and decision paths.
 
-## 🎯 Objectives
-- Predict employee attrition using AI models.
-- Interpret psychological and organizational factors behind turnover.
-- Build an interactive tool for HR decision-making (Streamlit UI).
+---
 
-## 🧠 Psychological Relevance
-Applies concepts from Organizational Psychology including:
-- Job Satisfaction
-- Employee Engagement
-- Burnout & Tenure Effects
-- Work–Life Balance
+## Psychological Relevance
+The app incorporates key concepts from Organizational Psychology:
+- **Job Satisfaction**
+- **Burnout & Tenure Effects**
+- **Employee Engagement**
+- **Work–Life Balance**
+- **Overtime & Performance Pressure**
 
-## 📊 Dataset
-- **Source**: [IBM HR Analytics Employee Attrition & Performance Dataset on Kaggle](https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset)
-- Features: Age, Gender, Job Role, Monthly Income, Environment Satisfaction, Work-Life Balance, etc.
+---
 
-## 🔧 Tech Stack
-- Python (Google Colab)
-- scikit-learn, pandas, seaborn, matplotlib
-- XGBoost, SHAP, LIME
-- Streamlit (for dashboard)
+## Features
+| ✔︎ | Capability |
+|----|------------|
+| Single-employee form with **140 + contextual tooltips** |
+| **Batch prediction** via CSV upload – instant row-by-row SHAP drill-down |
+| One-click **sample data** & **form reset** |
+| **Prediction history** with download / clear buttons (session-level) |
+| Fully cached XGBoost model for < 1 s inference |
 
-## 📁 Project Structure
-data/
-notebooks/
-models/
-app/
+---
 
-## 🚀 Outcome
+## Dataset
+IBM HR Analytics Employee Attrition & Performance  
+**Source** → <https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset>  
+**Target**: Attrition (Yes/No)
+
+---
+
+## Tech Stack
+- **Programming**: Python
+- **Modeling**: scikit-learn, XGBoost
+- **Visualization & Interpretation**: SHAP, matplotlib
+- **Data Processing**: pandas, numpy
+- **Web App**: Streamlit
+
+---
+
+## Usage
+To use the app:
+
+1. **Run locally with Streamlit:**
+   ```bash
+   streamlit run streamlit_app.py
+
+2. **Inside the app:**
+- Use the sidebar to input employee details or load sample data.
+- Optionally upload a CSV file for batch prediction.
+- Click Run Prediction to view risk probability and SHAP-based explanations.
+- Use Interactive Feature Impact to understand the effect of each factor.
+- Download or clear the prediction history as needed.
+
+Inputs include dropdowns and sliders based on employee attributes. SHAP visualizations will explain each prediction transparently.
+
+---
+
+## Installation
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/<your-github-username>/Employee-Attrition-Predictor-for-HR-Analytics.git
+cd Employee-Attrition-Predictor-for-HR-Analytics
+
+# 2. (Recommended) Create a virtual environment
+python -m venv .venv
+source .venv/bin/activate        # on Windows use .venv\Scripts\activate
+
+# 3. Install Python requirements
+pip install -r requirements.txt
+
+# 4. Launch the app
+streamlit run streamlit_app.py
+
+---
+
+## Outcome
 - Classification model predicting “Attrition: Yes/No”
 - Model interpretability (SHAP/LIME)
 - HR-facing app to simulate predictions
 
 ---
+
+## Attribution
+This project was developed by Sairaawahid.
+If you use or adapt this app, please credit the author by linking to the original GitHub repository:
+🔗 https://github.com/sairaawahid/Employee-Attrition-Predictor-for-HR-Analytics
+
+---
+
+## License
+This project is licensed under the MIT License.
+See the LICENSE file for more details.
