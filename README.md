@@ -37,11 +37,11 @@ job satisfaction, engagement, work–life balance and burnout indicators.
 
 ## Psychological Relevance
 The app incorporates key concepts from Organizational Psychology:
-- **Job Satisfaction**
-- **Burnout & Tenure Effects**
-- **Employee Engagement**
-- **Work–Life Balance**
-- **Overtime & Performance Pressure**
+- Job Satisfaction
+- Burnout & Tenure Effects
+- Employee Engagement
+- Work–Life Balance
+- Overtime & Performance Pressure
 
 ---
 
@@ -81,7 +81,6 @@ Inputs include dropdowns and sliders based on employee attributes. SHAP visualiz
 
 ## Installation
 
-```bash
 # 1. Clone the repo
 git clone https://github.com/<your-github-username>/Employee-Attrition-Predictor-for-HR-Analytics.git
 cd Employee-Attrition-Predictor-for-HR-Analytics
@@ -114,4 +113,4 @@ If you use or adapt this app, please credit the author by linking to the origina
 
 ## License
 This project is licensed under the MIT License.
-See the LICENSE file for more details.
+See the `LICENSE` file for more details.
