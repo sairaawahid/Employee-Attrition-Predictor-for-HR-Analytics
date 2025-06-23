@@ -61,16 +61,6 @@ IBM HR Analytics Employee Attrition & Performance
 
 ---
 
-## Project Structure
-employee-attrition-predictor-for-hr-analytics/
-│
-├── streamlit_app.py # Main Streamlit application
-├── xgboost_optimized_model.pkl # Trained ML model
-├── employee_schema.json # Input schema and data types
-├── feature_tooltips.json # UI tooltips for input sliders
-├── LICENSE # Project license
-└── README.md # Project documentation
-
 ## Usage
 To use the app:
 
@@ -105,7 +95,7 @@ pip install -r requirements.txt
 
 # 4. Launch the app
 streamlit run streamlit_app.py
-
+```bash
 ---
 
 ## Outcome
