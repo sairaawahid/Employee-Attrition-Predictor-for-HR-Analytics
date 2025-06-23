@@ -1,9 +1,22 @@
-# Employee-Attrition-Predictor-for-HR-Analytics
+# Employee Attrition Predictor  
+*Data-driven HR analytics enhanced with Organizational-Psychology insights*
 
-# 🧠 Employee Attrition Predictor (HR Analytics + AI + Psychology)
+---
 
-## 📌 Project Overview
-This project predicts whether an employee is likely to leave a company using machine learning techniques. It integrates psychological insights (job satisfaction, burnout, engagement) with HR data to build a data-driven attrition risk model.
+## Overview
+“Why do our employees leave?” – This Streamlit web-app gives HR professionals a clear, interpretable answer.  
+Upload a **single record** or an entire **CSV file** and the model will:
+
+* Predict the probability an employee will quit (`Attrition Yes/No`)
+* Highlight their **risk tier** (Low · Moderate · High)
+* Explain *why* with interactive **SHAP** visualisations  
+  (global beeswarm, decision path, local force plot, feature-impact bar)
+
+The app blends traditional HR fields (age, salary, tenure) with key **psychological factors** such as  
+job satisfaction, engagement, work–life balance and burnout indicators.
+
+---
+
 
 ## 🎯 Objectives
 - Predict employee attrition using AI models.
