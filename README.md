@@ -23,6 +23,18 @@ job satisfaction, engagement, work–life balance and burnout indicators.
 
 ---
 
+## Features
+- **Real-time Attrition Prediction**: Predict whether an employee is at risk of leaving the organization.
+- **Batch CSV Upload**: Upload a dataset of employees for multi-row predictions and exportable results.
+- **Risk Categorization**: Displays probability-based risk levels — Low, Moderate, or High.
+- **SHAP Explanations**: Understand which features drive each prediction (Force plot, Beeswarm, Decision plot).
+- **Interactive Feature Impact**: Explore how individual features influence the prediction.
+- **Download & Clear History**: Save prediction logs as CSV or clear them with one click.
+- **Sample Data & Reset**: Test the app with sample inputs or reset the form instantly.
+- **Psychology-Aligned Inputs**: Includes measures of job satisfaction, involvement, work-life balance, and more.
+
+---
+
 ## Psychological Relevance
 The app incorporates key concepts from Organizational Psychology:
 - **Job Satisfaction**
@@ -30,17 +42,6 @@ The app incorporates key concepts from Organizational Psychology:
 - **Employee Engagement**
 - **Work–Life Balance**
 - **Overtime & Performance Pressure**
-
----
-
-## Features
-| ✔︎ | Capability |
-|----|------------|
-| Single-employee form with **140 + contextual tooltips** |
-| **Batch prediction** via CSV upload – instant row-by-row SHAP drill-down |
-| One-click **sample data** & **form reset** |
-| **Prediction history** with download / clear buttons (session-level) |
-| Fully cached XGBoost model for < 1 s inference |
 
 ---
 
@@ -59,6 +60,16 @@ IBM HR Analytics Employee Attrition & Performance
 - **Web App**: Streamlit
 
 ---
+
+## Project Structure
+employee-attrition-predictor-for-hr-analytics/
+│
+├── streamlit_app.py # Main Streamlit application
+├── xgboost_optimized_model.pkl # Trained ML model
+├── employee_schema.json # Input schema and data types
+├── feature_tooltips.json # UI tooltips for input sliders
+├── LICENSE # Project license
+└── README.md # Project documentation
 
 ## Usage
 To use the app:
