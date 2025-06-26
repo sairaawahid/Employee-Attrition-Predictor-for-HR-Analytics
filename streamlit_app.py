@@ -23,7 +23,7 @@ st.set_page_config(page_title="Attrition Predictor",
                    initial_sidebar_state="expanded")
 
 # ═══════════════════════════════════════
-# 1 . Cached resources
+# 1. Cached resources
 # ═══════════════════════════════════════
 @st.cache_resource
 def load_model():
@@ -45,7 +45,7 @@ def get_explainer(_model):
     return shap.TreeExplainer(_model)
 
 # ═══════════════════════════════════════
-# 2 . Session-state keys
+# 2. Session-state keys
 # ═══════════════════════════════════════
 ss = st.session_state
 defaults = {
@@ -59,7 +59,7 @@ for k, v in defaults.items():
     ss.setdefault(k, v)
 
 # ═══════════════════════════════════════
-# 3 . Load model & metadata
+# 3. Load model & metadata
 # ═══════════════════════════════════════
 model        = load_model()
 schema_meta  = load_schema()
@@ -67,7 +67,7 @@ tooltips     = load_tooltips()
 explainer    = get_explainer(model)
 
 # ═══════════════════════════════════════
-# 4 . Helper functions
+# 4. Helper functions
 # ═══════════════════════════════════════
 def label_risk(p: float) -> str:
     if p < 0.30: return "🟢 Low"
@@ -82,7 +82,7 @@ def safe_stats(col: str):
     return lo, hi, mean
 
 # ═══════════════════════════════════════
-# 5 . UI header
+# 5. UI header
 # ═══════════════════════════════════════
 st.title("Employee Attrition Predictor")
 st.markdown(
@@ -103,7 +103,7 @@ with st.expander("🛈 **How to use this app**", expanded=False):
     )
 
 # ═══════════════════════════════════════
-# 6 . Sidebar – inputs
+# 6. Sidebar – inputs
 # ═══════════════════════════════════════
 st.sidebar.header("📋 Employee Attributes")
 
@@ -138,7 +138,6 @@ def sidebar_inputs() -> pd.DataFrame:
 
 sample_employee = {
     "Age": 32,
-    "Attrition": "No",
     "Business Travel": "Travel_Rarely",
     "Daily Rate": 1100,
     "Department": "Research & Development",
@@ -200,14 +199,14 @@ if ss.load_sample:
 st.sidebar.button("🗘 Reset Form", on_click=reset_form)
 
 # ═══════════════════════════════════════
-# 7 .  Data intake
+# 7.  Data intake
 # ═══════════════════════════════════════
 uploaded     = st.file_uploader("📂 Upload CSV (optional)", type="csv")
 batch_mode   = uploaded is not None
 raw_df       = pd.read_csv(uploaded) if batch_mode else sidebar_inputs()
 
 # ═══════════════════════════════════════
-# 8 .  Run Prediction control
+# 8.  Run Prediction control
 # ═══════════════════════════════════════
 if st.sidebar.button("Run Prediction"):
     ss.predicted      = True
@@ -232,7 +231,7 @@ if not ss.predicted and not batch_mode:
     st.stop()
 
 # ═══════════════════════════════════════
-# 9 .  Encode data & predict
+# 9.  Encode data & predict
 # ═══════════════════════════════════════
 template = {c: (m["options"][0] if m["dtype"] == "object" else 0)
             for c, m in schema_meta.items()}
@@ -284,7 +283,7 @@ preds  = model.predict(X_enc)
 probs  = model.predict_proba(X_enc)[:, 1]
 
 # ═══════════════════════════════════════
-# 10 .  Batch table + picker
+# 10.  Batch table + picker
 # ═══════════════════════════════════════
 if batch_mode:
     tbl = raw_df.copy()
@@ -313,7 +312,7 @@ prob = probs[row_idx]
 risk = label_risk(prob)
 
 # ═══════════════════════════════════════
-# 11 .  Results + SHAP
+# 11.  Results + SHAP
 # ═══════════════════════════════════════
 st.markdown("### Prediction Results")
 st.markdown(
@@ -417,7 +416,7 @@ else:
     st.pyplot(fig_bar); plt.clf()
 
 # ═══════════════════════════════════════
-# 12 .  Append to history exactly once
+# 12.  Append to history exactly once
 # ═══════════════════════════════════════
 row_key = f"row_{row_idx}"
 
@@ -442,7 +441,7 @@ else:
 ss.append_pending = False
 
 # ═══════════════════════════════════════
-# 13 .  History display / download / clear
+# 13.  History display, download, clear
 # ═══════════════════════════════════════
 st.subheader("📜 Prediction History")
 st.dataframe(ss.history, use_container_width=True)
@@ -460,7 +459,7 @@ if st.button("🗑️ Clear History", key="clear_history"):
     st.experimental_rerun()
 
 # ═══════════════════════════════════════
-# 14 . Attribution Footer (after full content)
+# 14. Attribution Footer (after full content)
 # ═══════════════════════════════════════
 if ss.predicted:
     st.markdown("---", unsafe_allow_html=True)
