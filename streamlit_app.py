@@ -5,7 +5,7 @@ import streamlit as st
 # (new Streamlit versions renamed it to st.rerun())
 # ──────────────────────────────────────────────────────────────
 if not hasattr(st, "experimental_rerun") and hasattr(st, "rerun"):
-    st.experimental_rerun = st.rerun          # type: ignore
+    st.experimental_rerun = st.rerun
 
 import pandas as pd
 import numpy as np
@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import json
 from pathlib import Path
 from datetime import datetime
+import re
 
 
 # ───────── Streamlit config – keep sidebar open ─────────────
@@ -52,6 +53,7 @@ defaults = {
     "predicted"      : False,   # at least one prediction run in this session
     "append_pending" : False,   # append *once* immediately after Run Prediction
     "load_sample"    : False,
+    "batch_appended_rows": set()
 }
 for k, v in defaults.items():
     ss.setdefault(k, v)
@@ -168,7 +170,7 @@ sample_employee = {
     "Years With Current Manager": 2,
 }
 
-# ----- Helper: make sample dict complete -----
+# ----- Make sample dict complete -----
 def _complete_sample_dict():
     """Return a dict that has *every* column in the schema.
        Any missing key gets the schema default."""
@@ -195,7 +197,7 @@ st.sidebar.button("Use Sample Data", on_click=load_sample)
 if ss.load_sample:
     ss.load_sample = False       # reset it
     st.experimental_rerun()      # safe rerun outside callback
-st.sidebar.button("🗘 Reset Form",    on_click=reset_form)
+st.sidebar.button("🗘 Reset Form", on_click=reset_form)
 
 # ═══════════════════════════════════════
 # 7 .  Data intake
@@ -214,7 +216,7 @@ if st.sidebar.button("Run Prediction"):
 # ═══════════════════════════════════════
 # Attribution Footer (shown when app first opens)
 # ═══════════════════════════════════════
-if not ss.predicted:
+if not ss.predicted and not batch_mode:
     st.markdown("---", unsafe_allow_html=True)
     st.markdown(
         """
@@ -238,14 +240,13 @@ X_full = pd.concat([raw_df, pd.DataFrame([template])], ignore_index=True)
 X_enc  = pd.get_dummies(X_full).iloc[:len(raw_df)]
 X_enc  = X_enc.reindex(columns=model.feature_names_in_, fill_value=0)
 
-# ── Helper: map every original feature to the encoded column(s) ──────────
-import re
+# --- Map every original feature to the encoded column(s) ---------------------- 
 
 def canon(name: str) -> str:
     """letters-and-digits only, lower-case"""
     return re.sub(r"[^A-Za-z0-9]+", "", name).lower()
 
-# --- 0.  Manual aliases for two awkward column names ----------------------
+# --- Manual aliases for two awkward column names ----------------------
 ALIASES = {
     "No. of Companies Worked": "NumCompaniesWorked",
     "Years With Current Manager": "YearsWithCurrManager",
@@ -268,12 +269,12 @@ for feat, meta in schema_meta.items():
     feat_for_match = ALIASES.get(feat, feat)
     cfeat = canon(feat_for_match)
 
-    if meta["dtype"] == "object":                         # → one-hot dummies
+    if meta["dtype"] == "object":                         # one-hot dummies
         cols = [
             enc for c, enc in canon2enc.items()
             if c.startswith(f"{cfeat}")
         ]
-    else:                                                 # → numeric column
+    else:                                                 # numeric column
         cols = [canon2enc[cfeat]] if cfeat in canon2enc else []
 
     if cols:                                              # keep only if found
@@ -287,9 +288,9 @@ probs  = model.predict_proba(X_enc)[:, 1]
 # ═══════════════════════════════════════
 if batch_mode:
     tbl = raw_df.copy()
-    tbl.insert(0, "Row", np.arange(1, len(tbl)+1))
-    tbl["Prediction"]    = np.where(preds==1, "Yes", "No")
-    tbl["Probability"]   = (probs*100).round(1).astype(str)+" %"
+    tbl.insert(0, "Row", np.arange(1, len(tbl) + 1))
+    tbl["Prediction"]    = np.where(preds == 1, "Yes", "No")
+    tbl["Probability"]   = (probs * 100).round(1).astype(str) + " %"
     tbl["Risk Category"] = [label_risk(p) for p in probs]
 
     st.subheader("📑 Batch Prediction Summary")
@@ -297,7 +298,7 @@ if batch_mode:
 
     sel_row_lbl = st.selectbox(
         "**Select employee row for explanation**",
-        [str(i) for i in range(1, len(tbl)+1)],
+        [str(i) for i in range(1, len(tbl) + 1)],
         index=0, key="row_select"
     )
     row_idx = int(sel_row_lbl) - 1
@@ -307,11 +308,12 @@ else:
 # Data for single explanation
 X_user  = X_enc.iloc[[row_idx]]
 user_df = raw_df.iloc[[row_idx]]
-pred, prob = preds[row_idx], probs[row_idx]
+pred = preds[row_idx]
+prob = probs[row_idx]
 risk = label_risk(prob)
 
 # ═══════════════════════════════════════
-# 11 .  Results + SHAP (unchanged UI)
+# 11 .  Results + SHAP
 # ═══════════════════════════════════════
 st.markdown("### Prediction Results")
 st.markdown(
@@ -396,7 +398,7 @@ feature = st.selectbox(
 # --- 4-b. Aggregate SHAP values if needed -------------------------------
 cols = feature_groups.get(feature, [])
 
-# ⛑️ Graceful fallback for missing SHAP columns
+# Fallback for missing SHAP columns
 if not cols or not all(col in X_user.columns for col in cols):
     st.warning("SHAP values unavailable for this feature.")
 else:
@@ -417,16 +419,27 @@ else:
 # ═══════════════════════════════════════
 # 12 .  Append to history exactly once
 # ═══════════════════════════════════════
-if ss.append_pending:
-    rec = user_df.copy()
-    rec["Prediction"]    = "Yes" if pred else "No"
-    rec["Probability"]   = f"{prob:.1%}"
-    rec["Risk Category"] = risk
-    rec["Timestamp"]     = datetime.now().strftime("%Y-%m-%d %H:%M")
-    ss.history = pd.concat([ss.history, rec], ignore_index=True)
+row_key = f"row_{row_idx}"
+
+if batch_mode:
+    if row_key not in ss.batch_appended_rows:
+        rec = user_df.copy()
+        rec["Prediction"] = "Yes" if pred else "No"
+        rec["Probability"] = f"{prob:.1%}"
+        rec["Risk Category"] = risk
+        rec["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        ss.history = pd.concat([ss.history, rec], ignore_index=True)
+        ss.batch_appended_rows.add(row_key)
+else:
+    if ss.append_pending:
+        rec = user_df.copy()
+        rec["Prediction"] = "Yes" if pred else "No"
+        rec["Probability"] = f"{prob:.1%}"
+        rec["Risk Category"] = risk
+        rec["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        ss.history = pd.concat([ss.history, rec], ignore_index=True)
 
 ss.append_pending = False
-ss.just_cleared   = False
 
 # ═══════════════════════════════════════
 # 13 .  History display / download / clear
